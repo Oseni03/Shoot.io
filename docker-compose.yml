@@ -1,0 +1,12 @@
+services:
+  api:
+    build:
+      context: ./apps/api
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+
+  web:
+    build:
+      context: ./apps/web
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"

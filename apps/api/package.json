@@ -1,0 +1,6 @@
+{
+  "name": "api",
+  "scripts": {
+    "dev": "uv run uvicorn main:app --reload"
+  }
+}
