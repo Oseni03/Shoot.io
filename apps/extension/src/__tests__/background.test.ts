@@ -419,4 +419,111 @@ describe("background message handlers", () => {
 			expect(mockStorage.refresh_token).toBeUndefined();
 		});
 	});
+
+	describe("API_REQUEST", () => {
+		describe("authenticated", () => {
+			beforeEach(async () => {
+				mockStorage.access_token = "at_valid";
+				mockStorage.refresh_token = "rt_valid";
+				const { initializeTokenStore } = await import("../token-store");
+				await initializeTokenStore();
+			});
+
+			it("makes a GET request with auth token", async () => {
+				registerFetchResponse("GET", "/organizations/org1", 200, {
+					id: "org1",
+					name: "Test Org",
+					slug: "test-org",
+					plan: "free",
+					member_count: 3,
+					logo_url: null,
+					created_at: "2026-01-01T00:00:00Z",
+				});
+
+				const response = await invokeHandler({
+					type: "API_REQUEST",
+					payload: { path: "/organizations/org1" },
+				});
+
+				expect(response.success).toBe(true);
+				if (response.success) {
+					const data = response.data as Record<string, unknown>;
+					expect(data.name).toBe("Test Org");
+					expect(data.member_count).toBe(3);
+				}
+			});
+
+			it("returns error on API failure", async () => {
+				mockFetch.mockImplementation(
+					(url: string, init?: { method?: string }) => {
+						const method = init?.method ?? "GET";
+						if (
+							url.includes("/organizations/bad") &&
+							method === "GET"
+						) {
+							return Promise.resolve({
+								status: 404,
+								ok: false,
+								json: () =>
+									Promise.resolve({
+										detail: "Organization not found",
+									}),
+							});
+						}
+						return Promise.resolve({
+							status: 404,
+							ok: false,
+							json: () =>
+								Promise.resolve({ detail: "Not found" }),
+						});
+					},
+				);
+
+				const response = await invokeHandler({
+					type: "API_REQUEST",
+					payload: { path: "/organizations/bad" },
+				});
+
+				expect(response.success).toBe(false);
+				if (!response.success) {
+					expect(response.error).toContain("Organization not found");
+				}
+			});
+
+			it("makes a POST request with body", async () => {
+				registerFetchResponse("POST", "/test", 201, {
+					message: "Created",
+				});
+
+				const response = await invokeHandler({
+					type: "API_REQUEST",
+					payload: {
+						path: "/test",
+						method: "POST",
+						body: { name: "test" },
+					},
+				});
+
+				expect(response.success).toBe(true);
+				if (response.success) {
+					const data = response.data as Record<string, unknown>;
+					expect(data.message).toBe("Created");
+				}
+			});
+		});
+
+		describe("unauthenticated", () => {
+			it("returns error when not authenticated", async () => {
+				const response = await invokeHandler({
+					type: "API_REQUEST",
+					payload: { path: "/organizations/org1" },
+				});
+
+				expect(response.success).toBe(false);
+				if (!response.success) {
+					expect(response.code).toBe("UNAUTHORIZED");
+				}
+			});
+		});
+	});
 });

@@ -23,6 +23,7 @@ export const OrgResponseSchema = z.object({
 	logo_url: z.string().nullable(),
 	plan: planSchema,
 	role: z.enum(MemberRole).optional(),
+	member_count: z.number(),
 	created_at: z.iso.datetime(),
 });
 
@@ -33,6 +34,7 @@ export const MembershipOrgResponseSchema = z.object({
 	logo_url: z.string().nullable(),
 	plan: planSchema,
 	role: z.enum(MemberRole),
+	member_count: z.number(),
 	created_at: z.iso.datetime(),
 });
 

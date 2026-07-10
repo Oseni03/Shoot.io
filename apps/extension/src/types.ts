@@ -15,7 +15,11 @@ export type PopupMessage =
 	| { type: "FORGOT_PASSWORD"; payload: PasswordResetRequest }
 	| { type: "RESET_PASSWORD"; payload: PasswordResetConfirm }
 	| { type: "GET_ME" }
-	| { type: "LOGOUT" };
+	| { type: "LOGOUT" }
+	| {
+			type: "API_REQUEST";
+			payload: { path: string; method?: string; body?: unknown };
+	  };
 
 export type PopupResponse =
 	| { success: true; data: TokenPair & { user?: UserResponse } }
@@ -23,6 +27,7 @@ export type PopupResponse =
 	| { success: true; data: UserResponse }
 	| { success: true; data: { message: string } }
 	| { success: true; data: null }
+	| { success: true; data: unknown }
 	| {
 			success: false;
 			error: string;

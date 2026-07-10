@@ -123,6 +123,52 @@ async function handleMessage(
 				break;
 			}
 
+			case "API_REQUEST": {
+				const { path, method, body } = message.payload;
+				const access = chromeTokenStore.getAccess();
+				if (!access) {
+					sendResponse({
+						success: false,
+						error: "Not authenticated",
+						code: "UNAUTHORIZED",
+					});
+					return;
+				}
+
+				const url = `${API_BASE}${path}`;
+				const headers: Record<string, string> = {
+					Authorization: `${PROJECT.tokenType} ${access}`,
+					"Content-Type": "application/json",
+				};
+
+				const init: RequestInit & { headers: Record<string, string> } =
+					{
+						method: method ?? "GET",
+						headers,
+					};
+				if (body) init.body = JSON.stringify(body);
+
+				const response = await fetch(url, init);
+				let responseBody: unknown;
+				try {
+					responseBody = await response.json();
+				} catch {
+					responseBody = {};
+				}
+
+				if (!response.ok) {
+					const detail =
+						(responseBody as Record<string, unknown>)?.detail ??
+						(responseBody as Record<string, unknown>)?.message ??
+						`Request failed with status ${response.status}`;
+					sendResponse({ success: false, error: String(detail) });
+					return;
+				}
+
+				sendResponse({ success: true, data: responseBody });
+				break;
+			}
+
 			default:
 				sendResponse({
 					success: false,
