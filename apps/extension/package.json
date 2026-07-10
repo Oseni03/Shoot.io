@@ -1,0 +1,33 @@
+{
+	"name": "resumio-extension",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "wxt",
+		"lint": "biome check",
+		"test": "vitest run",
+		"dev:firefox": "wxt -b firefox",
+		"build": "wxt build",
+		"build:firefox": "wxt build -b firefox",
+		"zip": "wxt zip",
+		"zip:firefox": "wxt zip -b firefox",
+		"postinstall": "wxt prepare"
+	},
+	"dependencies": {
+		"@resumio/shared": "*",
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.0",
+		"@types/chrome": "^0.2.2",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"jsdom": "^29.1.1",
+		"typescript": "^5",
+		"vitest": "^3",
+		"wxt": "^0.20.27"
+	}
+}

@@ -1,0 +1,21 @@
+{
+	"name": "@resumio/shared",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"lint": "biome check",
+		"format": "biome format --write"
+	},
+	"dependencies": {
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.0",
+		"@types/node": "^22",
+		"typescript": "^5",
+		"vitest": "^3"
+	}
+}
