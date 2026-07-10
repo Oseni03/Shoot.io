@@ -1,7 +1,7 @@
 import "./globals.css";
-import QueryProvider from "@/components/providers/QueryProvider";
 import type { Metadata, Viewport } from "next";
-import { Manrope, Inter } from "next/font/google";
+import { Inter, Manrope } from "next/font/google";
+import QueryProvider from "@/components/providers/QueryProvider";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/contexts/theme-control";
 import { APP, DEFAULTS } from "@/lib/config";

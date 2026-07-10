@@ -4,9 +4,9 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { extractApiErrorMessage } from "@/lib/error";
 import { useVerifyEmail } from "@/hooks/useAuth";
 import { ROUTES } from "@/lib/config";
+import { extractApiErrorMessage } from "@/lib/error";
 
 function VerifyEmailContent() {
 	const router = useRouter();

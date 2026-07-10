@@ -1,17 +1,16 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-
-import { extractApiErrorMessage } from "@/lib/error";
-import { organizationService } from "@/lib/api-services";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { ACTIVE_ORG_STORAGE_KEY } from "@/contexts/organization";
 import { ME_KEY } from "@/hooks/useAuth";
-import type { UserResponse } from "@/schemas";
-import { Button } from "@/components/ui/button";
+import { organizationService } from "@/lib/api-services";
+import { extractApiErrorMessage } from "@/lib/error";
+import type { MembershipOrgResponse, UserResponse } from "@/schemas";
 
 export default function AcceptInvitationPage() {
 	return (
@@ -52,10 +51,14 @@ function AcceptContent() {
 				setState({ status: "success" });
 				queryClient.setQueryData<UserResponse>(ME_KEY, (old) => {
 					if (!old) return old;
-					if (old.organizations?.some((o) => o.id === org.id)) return old;
+					if (old.organizations?.some((o) => o.id === org.id))
+						return old;
 					return {
 						...old,
-						organizations: [...(old.organizations ?? []), org],
+						organizations: [
+							...(old.organizations ?? []),
+							org as MembershipOrgResponse,
+						],
 					};
 				});
 				localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, org.id);

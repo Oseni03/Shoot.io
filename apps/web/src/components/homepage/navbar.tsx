@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { ThemeToggle } from "../theme-toggle";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS } from "@/lib/config";
+import { ThemeToggle } from "../theme-toggle";
 
 export default function Navbar() {
 	const [activeLink, setActiveLink] = useState("#features");

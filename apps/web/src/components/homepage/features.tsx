@@ -1,10 +1,10 @@
 "use client";
 
+import { ArrowRight, BookOpen, RotateCw, Zap } from "lucide-react";
 import { useState } from "react";
-import { BookOpen, Zap, RotateCw, ArrowRight } from "lucide-react";
-import { FeatureItem } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { FeatureItem } from "@/types";
 
 export const FEATURES: FeatureItem[] = [
 	{

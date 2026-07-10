@@ -1,15 +1,15 @@
-import api from "../api";
-import { snakeCaseSchema } from "../utils";
-import {
-	type StatsResponse,
-	OrgResponse,
-	OrgResponseSchema,
-	StatResponseSchema,
-	UserResponse,
-	UserResponseSchema,
-} from "@/schemas";
 import { z } from "zod";
 import { API_ENDPOINTS } from "@/lib/config";
+import {
+	type OrgResponse,
+	OrgResponseSchema,
+	StatResponseSchema,
+	type StatsResponse,
+	type UserResponse,
+	UserResponseSchema,
+} from "@/schemas";
+import api from "../api";
+import { snakeCaseSchema } from "../utils";
 
 export const adminService = {
 	/**

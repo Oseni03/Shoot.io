@@ -1,6 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { OrganizationGuard } from "@/components/organization-guard";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
 	SidebarInset,
 	SidebarProvider,

@@ -8,9 +8,9 @@ import { useEffect, useState } from "react";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 import { useOrganization } from "@/contexts/organization";
 import { ME_KEY } from "@/hooks/useAuth";
-import type { UserResponse } from "@/schemas";
-import { extractApiErrorMessage } from "@/lib/error";
 import { billingService, organizationService } from "@/lib/api-services";
+import { extractApiErrorMessage } from "@/lib/error";
+import type { MembershipOrgResponse, UserResponse } from "@/schemas";
 
 export default function OnboardingPage() {
 	const router = useRouter();
@@ -39,10 +39,14 @@ export default function OnboardingPage() {
 				setStatus("verified");
 				queryClient.setQueryData<UserResponse>(ME_KEY, (old) => {
 					if (!old) return old;
-					if (old.organizations?.some((o) => o.id === org.id)) return old;
+					if (old.organizations?.some((o) => o.id === org.id))
+						return old;
 					return {
 						...old,
-						organizations: [...(old.organizations ?? []), org],
+						organizations: [
+							...(old.organizations ?? []),
+							org as MembershipOrgResponse,
+						],
 					};
 				});
 				setTimeout(() => router.push("/dashboard"), 1500);

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldCheck, Lock, Globe } from "lucide-react";
+import { Globe, Lock, ShieldCheck } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const clauses = [

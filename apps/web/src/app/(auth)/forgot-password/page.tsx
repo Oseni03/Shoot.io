@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import ForgotPasswordForm from "@/components/auth/forgot-password-form";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import { useForgotPassword } from "@/hooks/useAuth";
 import { useZodForm } from "@/hooks/useZodForm";
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/config";
 import { extractApiErrorMessage } from "@/lib/error";
 import { ForgotPasswordFormSchema } from "@/schemas";
-import { ROUTES } from "@/lib/config";
 
 export default function ForgotPasswordPage() {
 	const router = useRouter();

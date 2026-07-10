@@ -1,24 +1,26 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-
+import type { AuthError, SignupResponse } from "@/lib/auth";
 import { authService } from "@/lib/auth";
+import { QUERY_KEYS, ROUTES } from "@/lib/config";
 import type {
 	LoginRequest,
-	RegisterRequest,
-	VerifyEmailRequest,
-	PasswordResetRequest,
-	PasswordResetConfirm,
-	UserResponse,
-	TokenPair,
 	MfaPendingResponse,
+	PasswordResetConfirm,
+	PasswordResetRequest,
+	RegisterRequest,
+	TokenPair,
+	UserResponse,
+	VerifyEmailRequest,
 } from "@/schemas";
-import type { AuthError } from "@/lib/auth";
-import type { SignupResponse } from "@/lib/auth";
-import { ROUTES, QUERY_KEYS } from "@/lib/config";
 
 export const ME_KEY = QUERY_KEYS.me;
 
 export function useLogin() {
-	return useMutation<(TokenPair & { user?: UserResponse }) | MfaPendingResponse, AuthError, LoginRequest>({
+	return useMutation<
+		(TokenPair & { user?: UserResponse }) | MfaPendingResponse,
+		AuthError,
+		LoginRequest
+	>({
 		mutationFn: (data: LoginRequest) => authService.login(data),
 	});
 }

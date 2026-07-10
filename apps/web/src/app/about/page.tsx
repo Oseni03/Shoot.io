@@ -1,7 +1,7 @@
 "use client";
 
+import { ArrowRight, Shield, Target, Users } from "lucide-react";
 import Link from "next/link";
-import { ArrowRight, Users, Shield, Target } from "lucide-react";
 import AnimatedMetrics from "@/components/about/animated-metrics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

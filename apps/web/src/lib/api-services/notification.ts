@@ -1,12 +1,12 @@
 import { z } from "zod";
-import api from "../api";
-import { snakeCaseSchema } from "../utils";
+import { API_ENDPOINTS } from "@/lib/config";
 import {
-	type NotificationResponse,
 	type NotificationListResponse,
+	type NotificationResponse,
 	NotificationResponseSchema,
 } from "@/schemas";
-import { API_ENDPOINTS } from "@/lib/config";
+import api from "../api";
+import { snakeCaseSchema } from "../utils";
 
 export const notificationService = {
 	/**

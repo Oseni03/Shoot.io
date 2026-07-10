@@ -1,3 +1,9 @@
+import {
+	API_ENDPOINTS as SharedAPIEndpoints,
+	PROJECT as SharedProject,
+	STORAGE_KEYS as SharedStorageKeys,
+} from "shared";
+
 export const APP = {
 	name: "Index",
 	description:
@@ -99,59 +105,7 @@ export const ROUTES = {
 } as const;
 
 export const API_ENDPOINTS = {
-	auth: {
-		login: "/auth/login",
-		register: "/auth/register",
-		refresh: "/auth/refresh",
-		logout: "/auth/logout",
-		verifyEmail: "/auth/verify-email",
-		forgotPassword: "/auth/forgot-password",
-		resetPassword: "/auth/reset-password",
-		me: "/auth/me",
-	},
-	users: {
-		me: "/users/me",
-		changePassword: "/users/me/change-password",
-	},
-	organizations: {
-		root: "/organizations/",
-		members: (orgId: string) => `/organizations/${orgId}/members`,
-		member: (orgId: string, userId: string) =>
-			`/organizations/${orgId}/members/${userId}`,
-		invitations: (orgId: string) => `/organizations/${orgId}/invitations`,
-		invitation: (orgId: string, invitationId: string) =>
-			`/organizations/${orgId}/invitations/${invitationId}`,
-		acceptInvitation: "/organizations/invitations/accept",
-	},
-	billing: {
-		verify: "/billing/verify",
-		initialize: (orgId: string) =>
-			`/billing/organizations/${orgId}/initialize`,
-		manage: (orgId: string) => `/billing/organizations/${orgId}/manage`,
-		cancel: (orgId: string) => `/billing/organizations/${orgId}/cancel`,
-	},
-	mfa: {
-		setup: "/mfa/setup",
-		verify: "/mfa/verify",
-		disable: "/mfa/disable",
-		validate: "/mfa/validate",
-	},
-	notifications: {
-		root: "/notifications/",
-		markRead: (id: string) => `/notifications/${id}/read`,
-		markAllRead: "/notifications/mark-all-read",
-	},
-	admin: {
-		stats: "/admin/stats",
-		users: "/admin/users",
-		organizations: "/admin/organizations",
-		deactivateUser: (userId: string) => `/admin/users/${userId}/deactivate`,
-		activateUser: (userId: string) => `/admin/users/${userId}/activate`,
-	},
-	health: {
-		health: "/health",
-		ready: "/ready",
-	},
+	...SharedAPIEndpoints,
 	oauth: {
 		google: "/api/v1/auth/oauth/google",
 		github: "/api/v1/auth/oauth/github",
@@ -161,9 +115,7 @@ export const API_ENDPOINTS = {
 } as const;
 
 export const STORAGE_KEYS = {
-	accessToken: "access_token",
-	refreshToken: "refresh_token",
-	activeOrganizationId: "active_organization_id",
+	...SharedStorageKeys,
 	themeMode: "index-theme-mode",
 	primaryColor: "index-primary-color",
 } as const;
@@ -188,51 +140,22 @@ export const NAV_LINKS = [
 ] as const;
 
 export const PROJECT = {
-	name: "Express SaaS",
-	version: "1.0.0",
-	apiPrefix: "/api/v1",
-
-	password: {
-		minLength: 8,
-		maxLength: 128,
-		requireUppercase: true,
-		requireDigit: true,
-	},
+	...SharedProject,
 	bcryptRounds: 12,
 	mfaPendingTokenExpiresIn: "5m",
-	mfaPendingExpiresInSeconds: 300,
-	tokenType: "bearer" as const,
-
 	rateLimit: {
 		login: { windowMs: 15 * 60 * 1000, max: 10 },
 		register: { windowMs: 60 * 60 * 1000, max: 5 },
 	},
-
 	pagination: {
 		defaultLimit: 20,
 		maxLimit: 100,
 	},
-
-	expiry: {
-		invitationDays: 7,
-		passwordResetHours: 1,
-		verificationHours: 24,
-	},
-
 	jsonBodyLimit: "1mb",
-
 	cors: {
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
 	},
-
-	roleRank: {
-		VIEWER: 0,
-		MEMBER: 1,
-		ADMIN: 2,
-		OWNER: 3,
-	},
-
 	oauth: {
 		google: {
 			authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -250,13 +173,11 @@ export const PROJECT = {
 			acceptHeader: "application/json",
 		},
 	},
-
 	billing: {
 		paystackApiBaseUrl: "https://api.paystack.co",
 		webhookHmacAlgorithm: "sha512",
 		nextBillingMonthOffset: 1,
 	},
-
 	logging: {
 		serviceName: "express-saas",
 		devLevel: "debug",
@@ -264,34 +185,6 @@ export const PROJECT = {
 		timeFormat: "SYS:HH:MM:ss",
 		ignoreFields: "pid,hostname",
 	},
-
-	planLimits: {
-		FREE: {
-			maxMembers: 5,
-			maxProjects: 3,
-			auditLogRetentionDays: 7,
-			mfaRequired: false,
-			ssoEnabled: false,
-			prioritySupport: false,
-		},
-		PRO: {
-			maxMembers: 50,
-			maxProjects: null as number | null,
-			auditLogRetentionDays: 90,
-			mfaRequired: false,
-			ssoEnabled: false,
-			prioritySupport: true,
-		},
-		ENTERPRISE: {
-			maxMembers: null as number | null,
-			maxProjects: null as number | null,
-			auditLogRetentionDays: 365,
-			mfaRequired: true,
-			ssoEnabled: true,
-			prioritySupport: true,
-		},
-	},
-
 	redisMaxRetries: 3,
 	healthCheckPaths: ["/api/v1/health", "/api/v1/ready"],
 	gracefulShutdownTimeoutMs: 10_000,

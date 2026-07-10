@@ -1,61 +1,25 @@
-export class AuthError extends Error {
-	readonly status: number;
-	readonly code: string;
+import {
+	AuthError,
+	AuthNetworkError,
+	AuthSessionError,
+	AuthValidationError,
+	extractApiError as sharedExtractApiError,
+} from "shared";
 
-	constructor(message: string, status: number, code?: string) {
-		super(message);
-		this.name = "AuthError";
-		this.status = status;
-		this.code = code ?? "UNKNOWN";
-	}
-}
-
-export class AuthNetworkError extends AuthError {
-	readonly cause: unknown;
-
-	constructor(message: string, cause: unknown) {
-		super(message, 0, "NETWORK");
-		this.name = "AuthNetworkError";
-		this.cause = cause;
-	}
-}
-
-export class AuthValidationError extends AuthError {
-	readonly fields?: Record<string, string[]>;
-
-	constructor(
-		message: string,
-		statusCode: number,
-		code?: string,
-		fields?: Record<string, string[]>,
-	) {
-		super(message, statusCode, code ?? "VALIDATION");
-		this.name = "AuthValidationError";
-		this.fields = fields;
-	}
-}
-
-export class AuthSessionError extends AuthError {
-	constructor(
-		message: string,
-		statusCode: number,
-		code: string = "UNAUTHORIZED",
-	) {
-		super(message, statusCode, code);
-		this.name = "AuthSessionError";
-	}
-}
+export { AuthError, AuthNetworkError, AuthSessionError, AuthValidationError };
 
 export function extractApiError(err: unknown): AuthError {
 	if (err instanceof AuthError) return err;
 
 	if (err && typeof err === "object" && "isAxiosError" in err) {
-		const axiosErr = err as any;
-		const response = axiosErr.response;
+		const axiosErr = err as Record<string, unknown>;
+		const response = axiosErr.response as
+			| { status: number; data: Record<string, unknown> }
+			| undefined;
 
 		if (!response) {
 			return new AuthNetworkError(
-				axiosErr.message || "Network error",
+				(axiosErr.message as string) || "Network error",
 				err,
 			);
 		}
@@ -64,9 +28,11 @@ export function extractApiError(err: unknown): AuthError {
 		const body = response.data || {};
 
 		if (status === 401) {
-			const code = body?.code ?? "UNAUTHORIZED";
+			const code = (body?.code as string) ?? "UNAUTHORIZED";
 			return new AuthSessionError(
-				body?.error || body?.detail || "Unauthorized",
+				(body?.error as string) ||
+					(body?.detail as string) ||
+					"Unauthorized",
 				status,
 				code,
 			);
@@ -74,22 +40,24 @@ export function extractApiError(err: unknown): AuthError {
 
 		if ([400, 422, 409, 429].includes(status)) {
 			return new AuthValidationError(
-				body?.error || body?.detail || "Validation error",
+				(body?.error as string) ||
+					(body?.detail as string) ||
+					"Validation error",
 				status,
-				body?.code,
-				body?.fields,
+				body?.code as string | undefined,
+				body?.fields as Record<string, string[]> | undefined,
 			);
 		}
 
 		return new AuthValidationError(
-			body?.error || body?.detail || body?.message || "Request failed",
+			(body?.error as string) ||
+				(body?.detail as string) ||
+				(body?.message as string) ||
+				"Request failed",
 			status,
-			body?.code,
+			body?.code as string | undefined,
 		);
 	}
 
-	return new AuthNetworkError(
-		err instanceof Error ? err.message : "An unexpected error occurred",
-		err,
-	);
+	return sharedExtractApiError(err);
 }

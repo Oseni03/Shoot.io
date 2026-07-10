@@ -60,9 +60,9 @@ import { useOrganization } from "@/contexts/organization";
 import { useMe } from "@/hooks/useAuth";
 import { useZodForm } from "@/hooks/useZodForm";
 import { organizationService } from "@/lib/api-services";
+import { extractApiErrorMessage } from "@/lib/error";
 import type { InvitationResponse, MembershipResponse } from "@/schemas";
 import { InviteMemberFormSchema, MemberRole } from "@/schemas";
-import { extractApiErrorMessage } from "@/lib/error";
 
 const MEMBERS_KEY = ["organization-members"] as const;
 const INVITATIONS_KEY = ["organization-invitations"] as const;
@@ -704,7 +704,7 @@ function MemberRow({
 												Make ADMIN
 											</DropdownMenuItem>
 										)}
-										{(member.role === MemberRole.ADMIN) && (
+										{member.role === MemberRole.ADMIN && (
 											<DropdownMenuItem
 												onClick={() =>
 													setConfirmRole(

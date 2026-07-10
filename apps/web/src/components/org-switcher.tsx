@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
 import { Building2, ChevronsUpDown, Plus } from "lucide-react";
-
+import * as React from "react";
+import { CreateOrganizationModal } from "@/components/create-organization-modal";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -19,7 +19,6 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { useOrganization } from "@/contexts/organization";
-import { CreateOrganizationModal } from "@/components/create-organization-modal";
 
 export function OrgSwitcher() {
 	const { isMobile } = useSidebar();

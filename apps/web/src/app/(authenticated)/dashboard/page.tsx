@@ -1,10 +1,8 @@
 "use client";
 
 import { Activity, BarChart3, Podcast, Users } from "lucide-react";
-
-import { useOrganization } from "@/contexts/organization";
-
 import { Skeleton } from "@/components/ui/skeleton";
+import { useOrganization } from "@/contexts/organization";
 
 const statLabels = [
 	{ title: "Total Projects", icon: Podcast },

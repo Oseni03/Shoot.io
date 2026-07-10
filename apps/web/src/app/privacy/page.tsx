@@ -1,4 +1,4 @@
-import { ShieldCheck, CheckCircle } from "lucide-react";
+import { CheckCircle, ShieldCheck } from "lucide-react";
 import PolicyTabs from "@/components/privacy/policy-tabs";
 import { Badge } from "@/components/ui/badge";
 

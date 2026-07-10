@@ -1,5 +1,6 @@
 import axios from "axios";
-import { ENV, STORAGE_KEYS, ROUTES, PROJECT } from "@/lib/config";
+import type { HttpClient } from "shared";
+import { ENV, PROJECT, ROUTES, STORAGE_KEYS } from "@/lib/config";
 
 export const tokenStore = {
 	getAccess: (): string | null => {
@@ -62,5 +63,36 @@ api.interceptors.response.use(
 		return Promise.reject(error);
 	},
 );
+
+export function axiosHttpClient(
+	url: string,
+	init?: {
+		method?: string;
+		headers?: Record<string, string>;
+		body?: string;
+		signal?: AbortSignal;
+	},
+): ReturnType<HttpClient> {
+	return api
+		.request({
+			url,
+			method: init?.method ?? "GET",
+			headers: init?.headers,
+			data: init?.body ? JSON.parse(init.body) : undefined,
+			signal: init?.signal,
+			transformResponse: (data) => data,
+		})
+		.then((response) => ({
+			status: response.status,
+			ok: response.status >= 200 && response.status < 300,
+			json: () => {
+				try {
+					return Promise.resolve(JSON.parse(response.data as string));
+				} catch {
+					return Promise.resolve({});
+				}
+			},
+		}));
+}
 
 export default api;

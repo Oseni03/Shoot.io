@@ -1,7 +1,7 @@
+import { API_ENDPOINTS } from "@/lib/config";
+import { type TokenPair, TokenPairSchema } from "@/schemas";
 import api from "../api";
 import { snakeCaseSchema } from "../utils";
-import { TokenPairSchema, type TokenPair } from "@/schemas";
-import { API_ENDPOINTS } from "@/lib/config";
 
 export const oauthService = {
 	googleLogin: () => {

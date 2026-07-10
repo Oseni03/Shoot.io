@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useOrganization } from "@/contexts/organization";
 
 export function OrganizationGuard({ children }: { children: React.ReactNode }) {

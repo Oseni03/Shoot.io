@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useOrganization } from "@/contexts/organization";
-import { useZodForm } from "@/hooks/useZodForm";
 import { ME_KEY } from "@/hooks/useAuth";
+import { useZodForm } from "@/hooks/useZodForm";
 import { billingService, organizationService } from "@/lib/api-services";
 import { PRICING_PLANS } from "@/lib/pricing-plans";
-import { OrgCreateFormSchema, type UserResponse, PlanTier } from "@/schemas";
+import type { MembershipOrgResponse } from "@/schemas";
+import { OrgCreateFormSchema, PlanTier, type UserResponse } from "@/schemas";
 
 export function OnboardingForm() {
 	const router = useRouter();
@@ -56,7 +57,10 @@ export function OnboardingForm() {
 				if (!old) return old;
 				return {
 					...old,
-					organizations: [...(old.organizations ?? []), org],
+					organizations: [
+						...(old.organizations ?? []),
+						org as MembershipOrgResponse,
+					],
 				};
 			});
 			setActiveOrg(org);

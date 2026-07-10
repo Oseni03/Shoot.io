@@ -1,11 +1,11 @@
-export { AuthService, authService } from "./auth-service";
 export type { SignupResponse } from "./auth-service";
-export { UserService, userService } from "./user-service";
+export { AuthService, authService } from "./auth-service";
 export {
 	AuthError,
 	AuthNetworkError,
-	AuthValidationError,
 	AuthSessionError,
+	AuthValidationError,
 	extractApiError,
 } from "./errors";
-export type { TokenStore, CallOptions } from "./types";
+export type { CallOptions, TokenStore } from "./types";
+export { UserService, userService } from "./user-service";

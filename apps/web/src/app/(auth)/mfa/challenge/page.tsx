@@ -1,18 +1,18 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { ME_KEY } from "@/hooks/useAuth";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { extractApiErrorMessage } from "@/lib/error";
-import { mfaService } from "@/lib/api-services";
+import { ME_KEY } from "@/hooks/useAuth";
 import { tokenStore } from "@/lib/api";
+import { mfaService } from "@/lib/api-services";
 import { ROUTES } from "@/lib/config";
+import { extractApiErrorMessage } from "@/lib/error";
 
 const PENDING_TOKEN_KEY = "mfa_pending_token";
 

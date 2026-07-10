@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import type { OrgResponse } from "@/schemas";
-import { STORAGE_KEYS } from "@/lib/config";
 import { useMe } from "@/hooks/useAuth";
+import { STORAGE_KEYS } from "@/lib/config";
+import type { OrgResponse } from "@/schemas";
 
 export const ACTIVE_ORG_STORAGE_KEY = STORAGE_KEYS.activeOrganizationId;
 

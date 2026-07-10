@@ -1,7 +1,7 @@
-import api from "../api";
-import { snakeCaseSchema } from "../utils";
 import { z } from "zod";
 import { API_ENDPOINTS } from "@/lib/config";
+import api from "../api";
+import { snakeCaseSchema } from "../utils";
 
 export const healthService = {
 	getHealth: async (): Promise<{

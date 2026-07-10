@@ -1,14 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
+import type { AuthError } from "@/lib/auth";
 import { userService } from "@/lib/auth";
+import { QUERY_KEYS } from "@/lib/config";
 import type {
+	ChangePasswordRequest,
 	UserResponse,
 	UserUpdateRequest,
-	ChangePasswordRequest,
 } from "@/schemas";
-import type { AuthError } from "@/lib/auth";
-
-import { QUERY_KEYS } from "@/lib/config";
 import { ME_KEY } from "./useAuth";
 
 export const USER_KEY = QUERY_KEYS.user;

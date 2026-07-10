@@ -24,10 +24,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useOrganization } from "@/contexts/organization";
-import { useZodForm } from "@/hooks/useZodForm";
 import { ME_KEY } from "@/hooks/useAuth";
+import { useZodForm } from "@/hooks/useZodForm";
 import { billingService, organizationService } from "@/lib/api-services";
-import type { PlanTier, UserResponse } from "@/schemas";
+import type { MembershipOrgResponse, PlanTier, UserResponse } from "@/schemas";
 import { OrgCreateFormSchema } from "@/schemas";
 
 interface CreateOrganizationModalProps {
@@ -75,7 +75,10 @@ export function CreateOrganizationModal({
 				if (!old) return old;
 				return {
 					...old,
-					organizations: [...(old.organizations ?? []), org],
+					organizations: [
+						...(old.organizations ?? []),
+						org as MembershipOrgResponse,
+					],
 				};
 			});
 			setActiveOrg(org);

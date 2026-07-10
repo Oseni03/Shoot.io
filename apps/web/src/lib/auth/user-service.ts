@@ -1,16 +1,15 @@
 import type { AxiosInstance } from "axios";
-
+import api from "@/lib/api";
+import { API_ENDPOINTS } from "@/lib/config";
 import { snakeCaseSchema } from "@/lib/utils";
 import {
-	type UserResponse,
-	type UserUpdateRequest,
 	type ChangePasswordRequest,
+	type UserResponse,
 	UserResponseSchema,
+	type UserUpdateRequest,
 } from "@/schemas";
-import api from "@/lib/api";
 import { extractApiError } from "./errors";
 import type { CallOptions } from "./types";
-import { API_ENDPOINTS } from "@/lib/config";
 
 export class UserService {
 	constructor(private readonly api: AxiosInstance) {}

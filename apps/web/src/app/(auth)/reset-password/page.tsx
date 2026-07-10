@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import ResetPasswordForm from "@/components/auth/reset-password-form";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import { useResetPassword } from "@/hooks/useAuth";
 import { useZodForm } from "@/hooks/useZodForm";
-import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/config";
 import { extractApiErrorMessage } from "@/lib/error";
 import { ResetPasswordFormSchema } from "@/schemas";
-import { ROUTES } from "@/lib/config";
 
 function ResetPasswordContent() {
 	const router = useRouter();

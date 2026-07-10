@@ -1,13 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-
-import Navbar from "@/components/homepage/navbar";
-import Hero from "@/components/homepage/hero";
-import SocialProof from "@/components/homepage/social-proof";
 import Features from "@/components/homepage/features";
-import Pricing from "@/components/homepage/pricing";
 import Footer from "@/components/homepage/footer";
+import Hero from "@/components/homepage/hero";
+import Navbar from "@/components/homepage/navbar";
+import Pricing from "@/components/homepage/pricing";
+import SocialProof from "@/components/homepage/social-proof";
 
 export default function HomePage() {
 	return (

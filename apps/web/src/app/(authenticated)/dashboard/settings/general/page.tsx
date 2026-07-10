@@ -15,9 +15,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useOrganization } from "@/contexts/organization";
+import { ME_KEY } from "@/hooks/useAuth";
 import { useZodForm } from "@/hooks/useZodForm";
 import { organizationService } from "@/lib/api-services";
-import { ME_KEY } from "@/hooks/useAuth";
 import { OrgUpdateFormSchema, type UserResponse } from "@/schemas";
 
 export default function GeneralPage() {
