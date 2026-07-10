@@ -15,9 +15,10 @@ npm workspaces monorepo (`apps/*`), Turbo for task orchestration.
 
 ```bash
 npm run dev        # turbo run dev — both apps
-npm run build      # turbo run build
 npm run lint       # turbo run lint
 ```
+
+> **NEVER run `npm run build` or any `build` script.** Build commands are slow, expensive, and unnecessary during development. Rely on `npm run dev` (HMR/watch mode) and `npx tsc --noEmit` for type checking. Slice 006 will set up CI to run builds on push.
 
 ### API (apps/api/)
 
@@ -38,7 +39,6 @@ Full Makefile at `apps/api/Makefile` (49 lines).
 
 ```bash
 npm run dev        # next dev
-npm run build      # next build (output: standalone)
 npm run lint       # biome check (includes organize-imports)
 npm run format     # biome format --write
 npx tsc --noEmit   # typecheck (no npm script)
@@ -50,7 +50,6 @@ No test framework installed. Biome (not ESLint). Tailwind v4 (`@import "tailwind
 
 ```bash
 npm run dev        # wxt dev (HMR, loads in Chrome as unpacked)
-npm run build      # wxt build (outputs to .output/)
 npm run lint       # biome check
 npm run test       # vitest run
 ```

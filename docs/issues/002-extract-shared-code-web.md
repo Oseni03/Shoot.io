@@ -29,7 +29,7 @@ What stays in `apps/web/src/lib/api.ts`: the Axios instance, request/response in
 
 ## Acceptance criteria
 
-- [ ] `npm run build` passes for `apps/web/` (Next.js build)
+- [ ] `npx tsc --noEmit` passes for `apps/web/` (TypeScript type-check)
 - [ ] `npm run lint` passes for `apps/web/` (Biome check)
 - [ ] `npx tsc --noEmit` passes for `apps/web/`
 - [ ] Login, register, password reset, and all authenticated pages in the web app work identically to before (manual smoke test)

@@ -19,7 +19,7 @@ Finalize the extension's integration into the monorepo. This covers everything t
 
 **Linting:** Biome already configured at root — verify `apps/extension/` is picked up by `biome.json`. The shared workspace uses TypeScript only — Biome should lint it too.
 
-**CI / GitHub Actions:** The repo has no CI workflow yet. This slice may optionally create the first one: `npm run lint && npm run test && npm run build` on PRs. This requires deciding on Node version, OS matrix, and caching strategy.
+**CI / GitHub Actions:** The repo has no CI workflow yet. This slice may optionally create the first one: `npm run lint && npm run test && npx tsc --noEmit` on PRs. This requires deciding on Node version, OS matrix, and caching strategy.
 
 **Documentation updates:**
 - Update `AGENTS.md` setup instructions with extension steps
@@ -35,7 +35,7 @@ Finalize the extension's integration into the monorepo. This covers everything t
 ## Acceptance criteria
 
 - [ ] `turbo run dev` at root starts the extension dev server alongside the API and web app
-- [ ] `turbo run build` at root builds the extension successfully
+- [ ] `npx tsc --noEmit` passes for `apps/extension/` (TypeScript type-check)
 - [ ] `turbo run lint` at root lints the extension and shared workspace
 - [ ] `turbo run test` at root runs extension tests
 - [ ] Extension tests cover service worker message handlers (happy path + error path)

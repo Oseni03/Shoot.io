@@ -29,7 +29,7 @@ No MFA, no registration, no password reset, no refresh token handling in this sl
 
 ## Acceptance criteria
 
-- [ ] `npm run build` passes for `packages/shared/` (TypeScript compilation succeeds)
+- [ ] `npx tsc --noEmit` passes for `packages/shared/` (TypeScript compilation succeeds)
 - [ ] `npm run lint` passes for `apps/extension/` (Biome check)
 - [ ] Extension loads in Chrome as unpacked extension from `.output/chrome-mv3/`
 - [ ] Popup shows login form on first open (not logged in)

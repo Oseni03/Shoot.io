@@ -22,10 +22,11 @@ Single Next.js 16 App Router app (no monorepo). Source in `src/`.
 
 ```bash
 npm run dev      # next dev, http://localhost:3000
-npm run build    # next build
 npm run lint     # biome check (includes organize-imports)
 npm run format   # biome format --write
 npx tsc --noEmit # typecheck (no script configured)
+
+> **NEVER run `npm run build` or any `build` script.** Build commands are slow, expensive, and unnecessary during development. Rely on `npm run dev` (HMR/watch mode) and `npx tsc --noEmit` for type checking.
 ```
 
 No test framework installed.
