@@ -16,6 +16,7 @@ export type PopupMessage =
 	| { type: "RESET_PASSWORD"; payload: PasswordResetConfirm }
 	| { type: "GET_ME" }
 	| { type: "LOGOUT" }
+	| { type: "REFRESH" }
 	| {
 			type: "API_REQUEST";
 			payload: { path: string; method?: string; body?: unknown };

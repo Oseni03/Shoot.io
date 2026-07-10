@@ -21,6 +21,33 @@ const authService = new AuthService(
 
 await initializeTokenStore();
 
+let refreshPromise: Promise<boolean> | null = null;
+
+async function attemptRefresh(): Promise<boolean> {
+	if (refreshPromise) return refreshPromise;
+
+	refreshPromise = (async () => {
+		try {
+			const result = await authService.refreshIfNeeded();
+			return result !== null;
+		} catch {
+			return false;
+		} finally {
+			refreshPromise = null;
+		}
+	})();
+
+	return refreshPromise;
+}
+
+chrome.alarms.create("token-refresh", { periodInMinutes: 15 });
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+	if (alarm.name === "token-refresh") {
+		attemptRefresh();
+	}
+});
+
 chrome.runtime.onMessage.addListener(
 	(
 		message: PopupMessage,
@@ -120,6 +147,19 @@ async function handleMessage(
 			case "LOGOUT": {
 				await authService.logout();
 				sendResponse({ success: true, data: null });
+				break;
+			}
+
+			case "REFRESH": {
+				const refreshed = await attemptRefresh();
+				if (refreshed) {
+					sendResponse({ success: true, data: null });
+				} else {
+					sendResponse({
+						success: false,
+						error: "Session expired",
+					});
+				}
 				break;
 			}
 

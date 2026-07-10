@@ -14,6 +14,7 @@ beforeEach(() => {
 	capturedListener = null;
 	mockFetch.mockReset();
 
+	const alarmListeners: Array<(alarm: { name: string }) => void> = [];
 	(globalThis as Record<string, unknown>).chrome = {
 		runtime: {
 			onMessage: {
@@ -26,6 +27,16 @@ beforeEach(() => {
 						) => void,
 					) => {
 						capturedListener = listener;
+					},
+				),
+			},
+		},
+		alarms: {
+			create: vi.fn(),
+			onAlarm: {
+				addListener: vi.fn(
+					(listener: (alarm: { name: string }) => void) => {
+						alarmListeners.push(listener);
 					},
 				),
 			},
@@ -417,6 +428,136 @@ describe("background message handlers", () => {
 			expect(response.success).toBe(true);
 			expect(mockStorage.access_token).toBeUndefined();
 			expect(mockStorage.refresh_token).toBeUndefined();
+		});
+	});
+
+	describe("REFRESH", () => {
+		describe("authenticated", () => {
+			beforeEach(async () => {
+				mockStorage.access_token = "at_expired";
+				mockStorage.refresh_token = "rt_valid";
+				const { initializeTokenStore } = await import("../token-store");
+				await initializeTokenStore();
+			});
+
+			it("refreshes tokens when refresh token is valid", async () => {
+				registerFetchResponse("POST", "/auth/refresh", 200, {
+					access_token: "at_new",
+					refresh_token: "rt_new",
+					token_type: "bearer",
+				});
+
+				const response = await invokeHandler({ type: "REFRESH" });
+
+				expect(response.success).toBe(true);
+				expect(mockStorage.access_token).toBe("at_new");
+				expect(mockStorage.refresh_token).toBe("rt_new");
+			});
+
+			it("returns failure when API returns 401", async () => {
+				registerFetchResponse("POST", "/auth/refresh", 401, {
+					detail: "Invalid refresh token",
+				});
+
+				const response = await invokeHandler({ type: "REFRESH" });
+
+				expect(response.success).toBe(false);
+			});
+
+			it("deduplicates concurrent refresh requests", async () => {
+				let resolveSlowRefresh: (value: unknown) => void = () => {};
+				const slowRefresh = new Promise((resolve) => {
+					resolveSlowRefresh = resolve;
+				});
+
+				mockFetch.mockImplementation(
+					(url: string, init?: { method?: string }) => {
+						if (
+							url.includes("/auth/refresh") &&
+							init?.method === "POST"
+						) {
+							return slowRefresh.then(() =>
+								Promise.resolve({
+									status: 200,
+									ok: true,
+									json: () =>
+										Promise.resolve({
+											access_token: "at_slow",
+											refresh_token: "rt_slow",
+											token_type: "bearer",
+										}),
+								}),
+							);
+						}
+						return Promise.resolve({
+							status: 404,
+							ok: false,
+							json: () =>
+								Promise.resolve({ detail: "Not found" }),
+						});
+					},
+				);
+
+				const p1 = invokeHandler({ type: "REFRESH" });
+				const p2 = invokeHandler({ type: "REFRESH" });
+
+				resolveSlowRefresh(undefined);
+
+				const [r1, r2] = await Promise.all([p1, p2]);
+
+				expect(r1.success).toBe(true);
+				expect(r2.success).toBe(true);
+				const refreshCalls = mockFetch.mock.calls.filter(
+					(call: unknown[]) =>
+						(call[0] as string).includes("/auth/refresh"),
+				);
+				expect(refreshCalls.length).toBe(1);
+			});
+		});
+
+		describe("unauthenticated", () => {
+			it("returns failure when no refresh token is stored", async () => {
+				const response = await invokeHandler({ type: "REFRESH" });
+
+				expect(response.success).toBe(false);
+				if (!response.success) {
+					expect(response.error).toBe("Session expired");
+				}
+			});
+		});
+
+		describe("alarm", () => {
+			it("fires refresh when token-refresh alarm triggers", async () => {
+				mockStorage.access_token = "at";
+				mockStorage.refresh_token = "rt";
+				const { initializeTokenStore } = await import("../token-store");
+				await initializeTokenStore();
+
+				registerFetchResponse("POST", "/auth/refresh", 200, {
+					access_token: "at_alarm",
+					refresh_token: "rt_alarm",
+					token_type: "bearer",
+				});
+
+				const addListenerMock = (
+					globalThis.chrome as unknown as {
+						alarms: {
+							onAlarm: { addListener: ReturnType<typeof vi.fn> };
+						};
+					}
+				).alarms.onAlarm.addListener;
+
+				const callback = addListenerMock.mock.calls[0][0] as (alarm: {
+					name: string;
+				}) => void;
+				callback({ name: "token-refresh" });
+
+				// Wait for microtask chain (attemptRefresh → refresh → store tokens)
+				await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+				expect(mockStorage.access_token).toBe("at_alarm");
+				expect(mockStorage.refresh_token).toBe("rt_alarm");
+			});
 		});
 	});
 

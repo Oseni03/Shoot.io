@@ -69,6 +69,7 @@ function App() {
 
 	useEffect(() => {
 		(async () => {
+			await sendMessage({ type: "REFRESH" });
 			const res = await sendMessage({ type: "GET_ME" });
 			if (!res.success || !res.data) {
 				setScreen("unauthenticated");

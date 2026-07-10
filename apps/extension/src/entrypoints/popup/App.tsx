@@ -293,6 +293,7 @@ function App() {
 
 	// Auth check on mount
 	const checkAuth = useCallback(async () => {
+		await sendMessage({ type: "REFRESH" });
 		const res = await sendMessage({ type: "GET_ME" });
 		if (res.success && res.data) {
 			setView({
