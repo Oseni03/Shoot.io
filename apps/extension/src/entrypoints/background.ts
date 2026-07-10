@@ -1,4 +1,4 @@
-import { AuthService } from "@resumio/shared";
+import { AuthService } from "shared";
 import { chromeTokenStore, initializeTokenStore } from "../token-store";
 import type { PopupMessage } from "../types";
 

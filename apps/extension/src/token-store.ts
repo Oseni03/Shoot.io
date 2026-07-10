@@ -1,4 +1,4 @@
-import type { TokenStore } from "@resumio/shared";
+import type { TokenStore } from "shared";
 
 const ACCESS_KEY = "access_token";
 const REFRESH_KEY = "refresh_token";

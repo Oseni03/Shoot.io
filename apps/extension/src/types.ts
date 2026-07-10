@@ -3,7 +3,7 @@ import type {
 	MfaPendingResponse,
 	TokenPair,
 	UserResponse,
-} from "@resumio/shared";
+} from "shared";
 
 export type PopupMessage =
 	| { type: "LOGIN"; payload: LoginRequest }

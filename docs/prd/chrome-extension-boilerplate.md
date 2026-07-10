@@ -67,7 +67,7 @@ Extracted from the current web app's `src/lib/auth/`, `src/schemas/`, `src/lib/u
 
 **Public interface:**
 ```
-@resumio/shared
+shared
 ├── AuthService (class)
 │   ├── constructor(api: FetchClient, tokenStore: TokenStore)
 │   ├── login(data) → TokenPair | MfaPendingResponse
@@ -95,7 +95,7 @@ Extracted from the current web app's `src/lib/auth/`, `src/schemas/`, `src/lib/u
 └── types/ (TypeScript interfaces)
 ```
 
-**Deep?** Yes. Clients import from `@resumio/shared` and only need to provide a `TokenStore` implementation and an HTTP client. No knowledge of the other client's storage or routing.
+**Deep?** Yes. Clients import from `shared` and only need to provide a `TokenStore` implementation and an HTTP client. No knowledge of the other client's storage or routing.
 
 #### 2. `apps/extension/` — New WXT app
 
@@ -129,7 +129,7 @@ Three contexts, one `packages/shared/` dependency.
 
 #### 3. `apps/web/` — Modified
 
-- Replace `src/lib/auth/auth-service.ts`, `src/lib/errors.ts`, `src/lib/utils.ts` (snakeCaseSchema), `src/schemas/`, `src/lib/config.ts` (API_ENDPOINTS, STORAGE_KEYS, PROJECT) with imports from `@resumio/shared`
+- Replace `src/lib/auth/auth-service.ts`, `src/lib/errors.ts`, `src/lib/utils.ts` (snakeCaseSchema), `src/schemas/`, `src/lib/config.ts` (API_ENDPOINTS, STORAGE_KEYS, PROJECT) with imports from `shared`
 - Keep: `src/lib/api.ts` (Axios instance), `src/lib/config.ts` (ENV, ROUTES — web-specific), web `tokenStore` (localStorage + cookie)
 - Update barrel exports
 

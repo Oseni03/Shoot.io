@@ -3,7 +3,7 @@ import type {
 	MfaPendingResponse,
 	TokenPair,
 	UserResponse,
-} from "@resumio/shared";
+} from "shared";
 import { useCallback, useEffect, useId, useState } from "react";
 import type { PopupMessage, PopupResponse } from "../../types";
 
