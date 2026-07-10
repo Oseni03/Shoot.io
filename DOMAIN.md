@@ -196,3 +196,5 @@ Default is `LOCAL`. OAuth users have `is_verified: true` set at registration.
 | Paystack | Nigerian payment gateway used for billing (replaces Stripe in this boilerplate) |
 | structlog | Structured logging library used throughout the backend |
 | snake_case | Naming convention for API JSON keys (backend returns, frontend validates via `snakeCaseSchema()`) |
+| TokenStore | Interface for auth token persistence — different implementations per client (localStorage for web, chrome.storage for extension) |
+| Extension | A Chrome Extension app in this monorepo, sharing auth, API client, and schemas with the web app |

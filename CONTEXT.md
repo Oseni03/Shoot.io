@@ -8,7 +8,8 @@ Living codebase context. Read at the start of every agent session.
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Frontend | Next.js 16 App Router + Tailwind v4 + Biome | `src/app/` route groups, no test framework, `output: "standalone"` |
+| Frontend (Web) | Next.js 16 App Router + Tailwind v4 + Biome | `src/app/` route groups, no test framework, `output: "standalone"` |
+| Frontend (Extension) | React 19 + Tailwind v4 + WXT | Popup + Options + Service Worker, Vitest for tests, `apps/extension/` |
 | API | FastAPI 0.136 + SQLAlchemy 2.0 async + Pydantic v2 | Uvicorn, `app/api/v1/endpoints/` routes, `app/services/` |
 | Database | Postgres 16 (asyncpg) + Alembic | Migrations in `app/db/migrations/`, snake_case columns, ULID PKs (26-char strings) |
 | Auth | Custom JWT (python-jose HS256) + bcrypt | access_token (30min) + refresh_token (30d, Redis-blacklistable). OAuth: Google + GitHub. MFA: TOTP. |
@@ -93,6 +94,24 @@ app/
 - structlog throughout. In dev: colored console. In production: JSON.
 - Request ID bound per-request via `request_id_middleware` (reads `X-Request-ID` header or generates UUID).
 - All log calls are `logger.info("event_name", key=value)` style.
+
+### Chrome Extension (apps/extension/)
+
+- Built with WXT (Web Extension Tools), React 19, Tailwind v4, Vitest.
+- **Service worker owns all API calls** — popup and options pages communicate via `chrome.runtime.sendMessage`. The service worker is a privileged context that bypasses CORS.
+- Auth tokens stored in `chrome.storage.local` via a `TokenStore` implementation (same interface as web's `localStorage` variant).
+- Env vars baked at build time via WXT/Vite env system (`VITE_API_URL`, etc.).
+- Extension delegates billing UI to the web app — no billing screens inside the extension.
+- Tests live in `apps/extension/src/tests/`. `vitest run` for CI, `vitest` for watch mode.
+- Options page has a full-height sidebar layout (matches web dashboard pattern) with sections: Profile, Organization, Billing (links to web app), Logout.
+- Shared code (`AuthService`, schemas, utils) lives in `packages/shared/`.
+
+### TokenStore abstraction
+
+- Auth tokens are stored via a `TokenStore` interface (`getAccess`, `getRefresh`, `set`, `clear`).
+- Web app implements it with `localStorage` + cookie (for Next.js middleware).
+- Chrome extension implements it with `chrome.storage.local`.
+- Same interface across all clients — allows shared `AuthService` class.
 
 ## Deprecated
 

@@ -8,6 +8,8 @@ npm workspaces monorepo (`apps/*`), Turbo for task orchestration.
 | --- | ---- | ----- | ---- |
 | API | `apps/api/` | FastAPI + SQLAlchemy async + Alembic + uv | 8000 |
 | Web | `apps/web/` | Next.js 16 App Router + Tailwind v4 + Biome | 3000 |
+| Extension | `apps/extension/` | React 19 + Tailwind v4 + WXT | — |
+| Shared | `packages/shared/` | AuthService, Zod schemas, utils | — |
 
 ## Commands
 
@@ -44,6 +46,22 @@ npx tsc --noEmit   # typecheck (no npm script)
 
 No test framework installed. Biome (not ESLint). Tailwind v4 (`@import "tailwindcss"`, no `tailwind.config.js`).
 
+### Extension (apps/extension/)
+
+```bash
+npm run dev        # wxt dev (HMR, loads in Chrome as unpacked)
+npm run build      # wxt build (outputs to .output/)
+npm run lint       # biome check
+npm run test       # vitest run
+```
+
+Built with WXT (Web Extension Tools). Popup + Options page + Service Worker.
+Service worker owns all API calls (bypasses CORS); popup/options communicate via `chrome.runtime.sendMessage`.
+
+### Shared (packages/shared/)
+
+Contains `AuthService` class, `TokenStore` interface, Zod schemas, `snakeCaseSchema()` utility, and shared config constants. Framework-independent — no React/Next.js deps.
+
 ## Setup
 
 1. `npm install` at root
@@ -54,12 +72,15 @@ No test framework installed. Biome (not ESLint). Tailwind v4 (`@import "tailwind
 
 Web has no `.env.example` — expected vars: `NEXT_PUBLIC_API_URL` (default `http://localhost:8000/api/v1`), `NEXT_PUBLIC_FRONTEND_URL`. Root `.env.example` has shared vars.
 
+Extension: `apps/extension/.env` needs `VITE_API_URL` (default `http://localhost:8000/api/v1`). Load in Chrome as unpacked extension from `.output/chrome-mv3/` after `npm run dev`.
+
 ## Architecture
 
 - API: layered (endpoints → services → repositories → SQLAlchemy models), ULID PKs, async throughout
 - Web: `src/app/` route groups, feature components mirrored in `src/components/`, all env vars through `src/lib/config.ts`
 - API returns snake_case JSON; web's `snakeCaseSchema()` validates that shape
 - Web auth: custom JWT (access_token in localStorage + cookie, refresh_token in localStorage only), no auto-refresh on 401 — call `authService.refreshIfNeeded()` proactively
+- Extension auth: same AuthService class from `packages/shared/`, but tokens stored in `chrome.storage.local`. Service worker owns all API calls to bypass CORS.
 
 ## Context files
 
@@ -69,5 +90,6 @@ Web has no `.env.example` — expected vars: `NEXT_PUBLIC_API_URL` (default `htt
 | `apps/api/CONTEXT.md` | Filled — domain glossary (User, Organization, MemberRole, PlanTier) |
 | `apps/api/README.md` | Filled — full backend docs (180 lines) |
 | `apps/web/API.md` | Filled — endpoint contract doc |
-| `CONTEXT.md` (root) | **Template** — not populated yet |
-| `DOMAIN.md` (root) | **Template** — not populated yet |
+| `CONTEXT.md` (root) | Filled — stack, invariants, patterns |
+| `DOMAIN.md` (root) | Filled — domain glossary |
+| `docs/adr/0001-chrome-extension-architecture.md` | Filled — WXT choice, service worker API proxy, shared workspace |
