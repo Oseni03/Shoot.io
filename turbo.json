@@ -7,7 +7,8 @@
       ],
       "outputs": [
         "dist/**",
-        ".next/**"
+        ".next/**",
+        ".output/**"
       ]
     },
     "dev": {
@@ -18,6 +19,7 @@
       "outputs": []
     },
     "test": {
+      "dependsOn": [],
       "outputs": []
     }
   }

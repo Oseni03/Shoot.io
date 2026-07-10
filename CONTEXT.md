@@ -97,14 +97,25 @@ app/
 
 ### Chrome Extension (apps/extension/)
 
-- Built with WXT (Web Extension Tools), React 19, Tailwind v4, Vitest.
+- Built with WXT (Web Extension Tools), React 19, Vitest + jsdom + React Testing Library (40+ tests).
 - **Service worker owns all API calls** — popup and options pages communicate via `chrome.runtime.sendMessage`. The service worker is a privileged context that bypasses CORS.
 - Auth tokens stored in `chrome.storage.local` via a `TokenStore` implementation (same interface as web's `localStorage` variant).
 - Env vars baked at build time via WXT/Vite env system (`VITE_API_URL`, etc.).
 - Extension delegates billing UI to the web app — no billing screens inside the extension.
-- Tests live in `apps/extension/src/tests/`. `vitest run` for CI, `vitest` for watch mode.
-- Options page has a full-height sidebar layout (matches web dashboard pattern) with sections: Profile, Organization, Billing (links to web app), Logout.
-- Shared code (`AuthService`, schemas, utils) lives in `packages/shared/`.
+- Tests in `apps/extension/src/__tests__/`: background handler tests (20), token-store tests (12), popup login form RTL tests (8). Setup file mocks `chrome.*` APIs.
+- Options page: full-height sidebar layout (matches web dashboard) with Profile, Organization (org switcher when >1 org), Billing (links to web app), Logout.
+- Popup sends `REFRESH` before `GET_ME` on mount for silent token refresh.
+- Token refresh via 15-min `chrome.alarms` with concurrency guard.
+- Message types: LOGIN, REGISTER, MFA_VALIDATE, FORGOT_PASSWORD, RESET_PASSWORD, GET_ME, LOGOUT, REFRESH, API_REQUEST.
+- Shared code (`AuthService`, `TokenStore` interface, schemas, utils, config) lives in `packages/shared/`.
+- `biome.json` per workspace, no root config. Extension has `.env.example` with `VITE_API_URL` + `VITE_FRONTEND_URL`.
+
+### Shared package (packages/shared/)
+
+- Framework-independent TypeScript: `AuthService`, `TokenStore` interface, Zod schemas, `snakeCaseSchema()`, config constants (`PROJECT`, `API_ENDPOINTS`, `STORAGE_KEYS`), error class hierarchy.
+- No React, no Next.js, no `window`, no `chrome.*` — pure TS + Zod.
+- No build step — consumers import TS source directly via `"shared"` workspace protocol.
+- Shared `snakeCaseSchema()` transform: camelCase → snake_case before Zod validation. Backend always returns snake_case.
 
 ### TokenStore abstraction
 

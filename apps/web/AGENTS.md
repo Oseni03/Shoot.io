@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Single Next.js 16 App Router app (no monorepo). Source in `src/`.
+Next.js 16 App Router web app in the resumio monorepo. Source in `src/`.
 
 ## Stack
 

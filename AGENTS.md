@@ -1,6 +1,4 @@
-# AGENTS.md — resumio
-
-npm workspaces monorepo (`apps/*`), Turbo for task orchestration.
+npm workspaces monorepo (`apps/*`, `packages/*`), Turbo for task orchestration.
 
 ## Apps
 
@@ -14,11 +12,13 @@ npm workspaces monorepo (`apps/*`), Turbo for task orchestration.
 ## Commands
 
 ```bash
-npm run dev        # turbo run dev — both apps
-npm run lint       # turbo run lint
+npm run dev        # turbo run dev — API, web, extension
+npm run lint       # turbo run lint — lints all apps
+npm run test       # turbo run test — tests all apps
+npm run build      # turbo run build (slow — avoid in dev)
 ```
 
-> **NEVER run `npm run build` or any `build` script.** Build commands are slow, expensive, and unnecessary during development. Rely on `npm run dev` (HMR/watch mode) and `npx tsc --noEmit` for type checking. Slice 006 will set up CI to run builds on push.
+> **NEVER run `npm run build` or any `build` script.** Build commands are slow, expensive, and unnecessary during development. Rely on `npm run dev` (HMR/watch mode) and `npx tsc --noEmit` for type checking.
 
 ### API (apps/api/)
 
@@ -41,7 +41,7 @@ Full Makefile at `apps/api/Makefile` (49 lines).
 npm run dev        # next dev
 npm run lint       # biome check (includes organize-imports)
 npm run format     # biome format --write
-npx tsc --noEmit   # typecheck (no npm script)
+npx tsc --noEmit   # typecheck
 ```
 
 No test framework installed. Biome (not ESLint). Tailwind v4 (`@import "tailwindcss"`, no `tailwind.config.js`).
@@ -51,15 +51,17 @@ No test framework installed. Biome (not ESLint). Tailwind v4 (`@import "tailwind
 ```bash
 npm run dev        # wxt dev (HMR, loads in Chrome as unpacked)
 npm run lint       # biome check
-npm run test       # vitest run
+npm run test       # vitest run (40+ tests)
+npx tsc --noEmit   # typecheck
 ```
 
 Built with WXT (Web Extension Tools). Popup + Options page + Service Worker.
 Service worker owns all API calls (bypasses CORS); popup/options communicate via `chrome.runtime.sendMessage`.
+Tested with Vitest + jsdom + React Testing Library (popup login form tests).
 
 ### Shared (packages/shared/)
 
-Contains `AuthService` class, `TokenStore` interface, Zod schemas, `snakeCaseSchema()` utility, and shared config constants. Framework-independent — no React/Next.js deps.
+Contains `AuthService` class, `TokenStore` interface, Zod schemas, `snakeCaseSchema()` utility, config constants, and error class hierarchy. Framework-independent — no React/Next.js deps. No build step — consumers import TS source directly.
 
 ## Setup
 
@@ -71,7 +73,7 @@ Contains `AuthService` class, `TokenStore` interface, Zod schemas, `snakeCaseSch
 
 Web has no `.env.example` — expected vars: `NEXT_PUBLIC_API_URL` (default `http://localhost:8000/api/v1`), `NEXT_PUBLIC_FRONTEND_URL`. Root `.env.example` has shared vars.
 
-Extension: `apps/extension/.env` needs `VITE_API_URL` (default `http://localhost:8000/api/v1`). Load in Chrome as unpacked extension from `.output/chrome-mv3/` after `npm run dev`.
+Extension: copy `apps/extension/.env.example` → `apps/extension/.env`, set `VITE_API_URL` (default `http://localhost:8000/api/v1`). Load in Chrome as unpacked extension from `.output/chrome-mv3/` after `npm run dev`.
 
 ## Architecture
 
@@ -79,7 +81,7 @@ Extension: `apps/extension/.env` needs `VITE_API_URL` (default `http://localhost
 - Web: `src/app/` route groups, feature components mirrored in `src/components/`, all env vars through `src/lib/config.ts`
 - API returns snake_case JSON; web's `snakeCaseSchema()` validates that shape
 - Web auth: custom JWT (access_token in localStorage + cookie, refresh_token in localStorage only), no auto-refresh on 401 — call `authService.refreshIfNeeded()` proactively
-- Extension auth: same AuthService class from `packages/shared/`, but tokens stored in `chrome.storage.local`. Service worker owns all API calls to bypass CORS.
+- Extension auth: same AuthService class from `packages/shared/`, but tokens stored in `chrome.storage.local`. Service worker owns all API calls to bypass CORS. Token refresh via 15-min `chrome.alarms` with concurrency guard.
 
 ## Context files
 
@@ -88,7 +90,9 @@ Extension: `apps/extension/.env` needs `VITE_API_URL` (default `http://localhost
 | `apps/web/AGENTS.md` | Filled — frontend architecture, conventions, API contract rules |
 | `apps/api/CONTEXT.md` | Filled — domain glossary (User, Organization, MemberRole, PlanTier) |
 | `apps/api/README.md` | Filled — full backend docs (180 lines) |
-| `apps/web/API.md` | Filled — endpoint contract doc |
+| `apps/extension/CONTEXT.md` | Filled — extension architecture, message types, testing |
+| `apps/extension/README.md` | Filled — extension dev workflow, loading, architecture |
+| `packages/shared/CONTEXT.md` | Filled — shared exports, constraints |
 | `CONTEXT.md` (root) | Filled — stack, invariants, patterns |
 | `DOMAIN.md` (root) | Filled — domain glossary |
 | `docs/adr/0001-chrome-extension-architecture.md` | Filled — WXT choice, service worker API proxy, shared workspace |
