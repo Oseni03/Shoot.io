@@ -21,6 +21,7 @@ class PlanLimits:
     mfa_required: bool
     sso_enabled: bool
     priority_support: bool
+    max_shots_per_month: int | None
 
     def __init__(self, plan: PlanTier) -> None:
         entry = getattr(project.plan_limits, plan.name)
@@ -30,6 +31,7 @@ class PlanLimits:
         self.mfa_required = entry.mfa_required
         self.sso_enabled = entry.sso_enabled
         self.priority_support = entry.priority_support
+        self.max_shots_per_month = entry.max_shots_per_month
 
     @classmethod
     def for_plan(cls, plan: PlanTier) -> "PlanLimits":
@@ -59,4 +61,13 @@ def assert_feature_available(plan: PlanTier, feature: str) -> None:
         raise PaymentRequiredError(
             f"The '{feature}' feature is not available on your current plan. "
             "Please upgrade to access it."
+        )
+
+
+def assert_shot_available(plan: PlanTier, current_usage: int) -> None:
+    limits = PlanLimits.for_plan(plan)
+    if limits.max_shots_per_month is not None and current_usage >= limits.max_shots_per_month:
+        raise PaymentRequiredError(
+            f"Your plan allows {limits.max_shots_per_month} shots per month. "
+            "Upgrade to PRO for unlimited shots."
         )

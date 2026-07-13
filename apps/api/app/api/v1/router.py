@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     notifications,
     oauth,
     organizations,
+    resumes,
     users,
 )
 
@@ -23,3 +24,4 @@ router.include_router(organizations.router)
 router.include_router(billing.router)
 router.include_router(notifications.router)
 router.include_router(admin.router)
+router.include_router(resumes.router)

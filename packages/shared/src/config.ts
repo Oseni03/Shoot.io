@@ -52,6 +52,14 @@ export const API_ENDPOINTS = {
 		health: "/health",
 		ready: "/ready",
 	},
+	resumes: {
+		root: "/resumes",
+		shoot: "/resumes/shoot",
+		shotsRemaining: "/resumes/shots/remaining",
+		resume: (id: string) => `/resumes/${id}`,
+		setMaster: (id: string) => `/resumes/${id}/master`,
+		tailored: "/resumes/tailored",
+	},
 } as const;
 
 export const STORAGE_KEYS = {
@@ -86,6 +94,7 @@ export const PROJECT = {
 			mfaRequired: false,
 			ssoEnabled: false,
 			prioritySupport: false,
+			maxShotsPerMonth: 3,
 		},
 		PRO: {
 			maxMembers: 50,
@@ -94,6 +103,7 @@ export const PROJECT = {
 			mfaRequired: false,
 			ssoEnabled: false,
 			prioritySupport: true,
+			maxShotsPerMonth: null as number | null,
 		},
 		ENTERPRISE: {
 			maxMembers: null as number | null,
@@ -102,6 +112,7 @@ export const PROJECT = {
 			mfaRequired: true,
 			ssoEnabled: true,
 			prioritySupport: true,
+			maxShotsPerMonth: null as number | null,
 		},
 	},
 	expiry: {

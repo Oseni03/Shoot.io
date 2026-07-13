@@ -667,4 +667,101 @@ describe("background message handlers", () => {
 			});
 		});
 	});
+
+	describe("SHOOT_JOB", () => {
+		describe("authenticated", () => {
+			beforeEach(async () => {
+				mockStorage.access_token = "at_valid";
+				mockStorage.refresh_token = "rt_valid";
+				const { initializeTokenStore } = await import("../token-store");
+				await initializeTokenStore();
+			});
+
+			it("sends shoot request with job details and returns auto-fill fields", async () => {
+				registerFetchResponse("POST", "/resumes/shoot", 200, {
+					tailored_resume_id: "tr_123",
+					auto_fill_fields: {
+						summary: "Experienced engineer",
+						skills: "Python, React",
+					},
+				});
+
+				const response = await invokeHandler({
+					type: "SHOOT_JOB",
+					payload: {
+						jobDescriptionText: "We need a Python developer",
+						sourceUrl: "https://indeed.com/viewjob?jk=123",
+						jobTitle: "Python Developer",
+						company: "Tech Corp",
+					},
+				});
+
+				expect(response.success).toBe(true);
+				if (response.success) {
+					const data = response.data as Record<string, unknown>;
+					expect(data.tailored_resume_id).toBe("tr_123");
+					expect(
+						(data.auto_fill_fields as Record<string, string>).summary,
+					).toBe("Experienced engineer");
+				}
+			});
+
+			it("returns error on shoot failure", async () => {
+				mockFetch.mockImplementation(
+					(url: string, init?: { method?: string }) => {
+						if (
+							url.includes("/resumes/shoot") &&
+							init?.method === "POST"
+						) {
+							return Promise.resolve({
+								status: 402,
+								ok: false,
+								json: () =>
+									Promise.resolve({
+										detail:
+											"Your plan allows 3 shots per month. Upgrade to PRO for unlimited shots.",
+									}),
+							});
+						}
+						return Promise.resolve({
+							status: 404,
+							ok: false,
+							json: () =>
+								Promise.resolve({ detail: "Not found" }),
+						});
+					},
+				);
+
+				const response = await invokeHandler({
+					type: "SHOOT_JOB",
+					payload: {
+						jobDescriptionText: "Test JD",
+						sourceUrl: "https://indeed.com",
+					},
+				});
+
+				expect(response.success).toBe(false);
+				if (!response.success) {
+					expect(response.error).toContain("Upgrade to PRO");
+				}
+			});
+		});
+
+		describe("unauthenticated", () => {
+			it("returns error when not authenticated", async () => {
+				const response = await invokeHandler({
+					type: "SHOOT_JOB",
+					payload: {
+						jobDescriptionText: "Test JD",
+						sourceUrl: "https://indeed.com",
+					},
+				});
+
+				expect(response.success).toBe(false);
+				if (!response.success) {
+					expect(response.code).toBe("UNAUTHORIZED");
+				}
+			});
+		});
+	});
 });

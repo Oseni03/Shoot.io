@@ -209,6 +209,56 @@ async function handleMessage(
 				break;
 			}
 
+			case "SHOOT_JOB": {
+				const { jobDescriptionText, sourceUrl, jobTitle, company } =
+					message.payload;
+				const access = chromeTokenStore.getAccess();
+				if (!access) {
+					sendResponse({
+						success: false,
+						error: "Not authenticated",
+						code: "UNAUTHORIZED",
+					});
+					return;
+				}
+
+				const url = `${API_BASE}/resumes/shoot`;
+				const body = {
+					job_description_text: jobDescriptionText,
+					source_url: sourceUrl,
+					job_title: jobTitle,
+					company,
+				};
+
+				const response = await fetch(url, {
+					method: "POST",
+					headers: {
+						Authorization: `${PROJECT.tokenType} ${access}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(body),
+				});
+
+				let responseBody: unknown;
+				try {
+					responseBody = await response.json();
+				} catch {
+					responseBody = {};
+				}
+
+				if (!response.ok) {
+					const detail =
+						(responseBody as Record<string, unknown>)?.detail ??
+						(responseBody as Record<string, unknown>)?.message ??
+						`Shoot failed with status ${response.status}`;
+					sendResponse({ success: false, error: String(detail) });
+					return;
+				}
+
+				sendResponse({ success: true, data: responseBody });
+				break;
+			}
+
 			default:
 				sendResponse({
 					success: false,

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.db.base import Base
 from app.db.session import get_db
-from app.main import app
+from main import app
 
 # Use an in-memory SQLite for tests (swap for test Postgres if needed)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -44,3 +44,24 @@ async def client(db_session: AsyncSession) -> AsyncClient:
     ) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def auth_headers(client: AsyncClient, db_session: AsyncSession) -> dict[str, str]:
+    """Register a user and return auth headers."""
+    from app.core.security import create_access_token
+    from app.lib.ulid import new_ulid
+    from app.models.user import User
+
+    user = User(
+        id=new_ulid(),
+        email="test@example.com",
+        hashed_password="hashed_placeholder",
+        is_verified=True,
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    token = create_access_token(user.id)
+    return {"Authorization": f"Bearer {token}"}

@@ -20,6 +20,15 @@ export type PopupMessage =
 	| {
 			type: "API_REQUEST";
 			payload: { path: string; method?: string; body?: unknown };
+	  }
+	| {
+			type: "SHOOT_JOB";
+			payload: {
+				jobDescriptionText: string;
+				sourceUrl: string;
+				jobTitle?: string;
+				company?: string;
+			};
 	  };
 
 export type PopupResponse =

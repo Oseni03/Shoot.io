@@ -10,3 +10,15 @@ from app.models.organization import Organization  # noqa: F401
 from app.models.subscription import Subscription  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.membership import Membership  # noqa: F401
+from app.models.resume import (  # noqa: F401
+    Resume,
+    ResumeExperience,
+    ResumeEducation,
+    ResumeSkill,
+    ResumeSummary,
+    ResumeProject,
+    ResumeCertification,
+    JobDescription,
+    TailoredResume,
+    UserMonthlyUsage,
+)

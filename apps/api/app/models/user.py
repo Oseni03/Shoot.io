@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.membership import Membership
     from app.models.notification import Notification
     from app.models.audit_log import AuditLog
+    from app.models.resume import Resume, TailoredResume, UserMonthlyUsage
 
 
 class OAuthProvider(str, enum.Enum):
@@ -55,6 +56,15 @@ class User(Base, TimestampMixin):
         back_populates="user", cascade="all, delete-orphan"
     )
     audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="user")
+    resumes: Mapped[list["Resume"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    tailored_resumes: Mapped[list["TailoredResume"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    monthly_usage: Mapped[list["UserMonthlyUsage"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email}>"

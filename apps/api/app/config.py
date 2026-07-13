@@ -178,6 +178,7 @@ class PlanLimitEntry:
     mfa_required: bool
     sso_enabled: bool
     priority_support: bool
+    max_shots_per_month: int | None = None
 
 
 @dataclass(frozen=True)
@@ -185,14 +186,17 @@ class PlanLimitsConfig:
     FREE: PlanLimitEntry = field(default_factory=lambda: PlanLimitEntry(
         max_members=5, max_projects=3, audit_log_retention_days=7,
         mfa_required=False, sso_enabled=False, priority_support=False,
+        max_shots_per_month=3,
     ))
     PRO: PlanLimitEntry = field(default_factory=lambda: PlanLimitEntry(
         max_members=50, max_projects=None, audit_log_retention_days=90,
         mfa_required=False, sso_enabled=False, priority_support=True,
+        max_shots_per_month=None,
     ))
     ENTERPRISE: PlanLimitEntry = field(default_factory=lambda: PlanLimitEntry(
         max_members=None, max_projects=None, audit_log_retention_days=365,
         mfa_required=True, sso_enabled=True, priority_support=True,
+        max_shots_per_month=None,
     ))
 
 
