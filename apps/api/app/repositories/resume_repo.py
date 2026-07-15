@@ -59,7 +59,7 @@ class ResumeRepository:
         result = await self.db.execute(
             select(Resume)
             .where(Resume.user_id == user_id)
-            .order_by(Resume.updated_at.desc())
+            .order_by(Resume.created_at.desc())
         )
         return list(result.scalars().all())
 

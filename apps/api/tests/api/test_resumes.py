@@ -1,6 +1,7 @@
 """Tests for resume API endpoints."""
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -143,6 +144,107 @@ async def test_set_master(client: AsyncClient, auth_headers: dict[str, str]) -> 
         headers=auth_headers,
     )
     assert get_r2.json()["is_master"] is False
+
+
+@pytest_asyncio.fixture
+async def other_user_headers(db_session: AsyncSession) -> dict[str, str]:
+    """Auth headers for a second, unrelated user — for ownership isolation tests."""
+    from app.core.security import create_access_token
+    from app.lib.ulid import new_ulid
+    from app.models.user import User
+
+    user = User(
+        id=new_ulid(),
+        email="other-user@example.com",
+        hashed_password="hashed_placeholder",
+        is_verified=True,
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+
+
+@pytest_asyncio.fixture
+async def owner_resume_id(client: AsyncClient, auth_headers: dict[str, str]) -> str:
+    """A resume owned by the primary auth_headers user — for ownership isolation tests."""
+    create = await client.post(
+        "/api/v1/resumes",
+        json={"title": "Owner's Resume"},
+        headers=auth_headers,
+    )
+    return create.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_get_resume_owned_by_other_user_returns_404(
+    client: AsyncClient, owner_resume_id: str, other_user_headers: dict[str, str]
+) -> None:
+    res = await client.get(f"/api/v1/resumes/{owner_resume_id}", headers=other_user_headers)
+    assert res.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_resume_owned_by_other_user_returns_404(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    owner_resume_id: str,
+    other_user_headers: dict[str, str],
+) -> None:
+    res = await client.put(
+        f"/api/v1/resumes/{owner_resume_id}",
+        json={"title": "Hijacked Title"},
+        headers=other_user_headers,
+    )
+    assert res.status_code == 404
+
+    # Original resume is untouched
+    get = await client.get(f"/api/v1/resumes/{owner_resume_id}", headers=auth_headers)
+    assert get.json()["title"] == "Owner's Resume"
+
+
+@pytest.mark.asyncio
+async def test_delete_resume_owned_by_other_user_returns_404(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    owner_resume_id: str,
+    other_user_headers: dict[str, str],
+) -> None:
+    res = await client.delete(f"/api/v1/resumes/{owner_resume_id}", headers=other_user_headers)
+    assert res.status_code == 404
+
+    # Original resume still exists for its owner
+    get = await client.get(f"/api/v1/resumes/{owner_resume_id}", headers=auth_headers)
+    assert get.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_set_master_owned_by_other_user_returns_404(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    owner_resume_id: str,
+    other_user_headers: dict[str, str],
+) -> None:
+    res = await client.post(f"/api/v1/resumes/{owner_resume_id}/master", headers=other_user_headers)
+    assert res.status_code == 404
+
+    # Original resume's master flag is untouched
+    get = await client.get(f"/api/v1/resumes/{owner_resume_id}", headers=auth_headers)
+    assert get.json()["is_master"] is False
+
+
+@pytest.mark.asyncio
+async def test_list_resumes_does_not_include_other_users_resumes(
+    client: AsyncClient,
+    auth_headers: dict[str, str],
+    owner_resume_id: str,
+    other_user_headers: dict[str, str],
+) -> None:
+    await client.post("/api/v1/resumes", json={"title": "Theirs"}, headers=other_user_headers)
+
+    res = await client.get("/api/v1/resumes", headers=auth_headers)
+    titles = [r["title"] for r in res.json()]
+    assert titles == ["Owner's Resume"]
 
 
 @pytest.mark.asyncio

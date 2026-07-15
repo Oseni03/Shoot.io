@@ -126,6 +126,32 @@ async def test_list_by_user(db_session: AsyncSession) -> None:
     assert len(resumes) == 2
 
 
+@pytest.mark.asyncio
+async def test_list_by_user_ordered_by_created_at_desc(db_session: AsyncSession) -> None:
+    from datetime import datetime, timedelta, UTC
+
+    user = User(id=new_ulid(), email="order@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    base = datetime.now(UTC)
+    older = Resume(id=new_ulid(), user_id=user.id, title="Older", is_master=False, created_at=base, updated_at=base)
+    newer = Resume(
+        id=new_ulid(),
+        user_id=user.id,
+        title="Newer",
+        is_master=False,
+        created_at=base + timedelta(minutes=5),
+        updated_at=base,
+    )
+    db_session.add_all([older, newer])
+    await db_session.flush()
+
+    resumes = await ResumeRepository(db_session).list_by_user(user.id)
+
+    assert [r.title for r in resumes] == ["Newer", "Older"]
+
+
 # ── Plan limits ─────────────────────────────────────────────────────────────
 
 
