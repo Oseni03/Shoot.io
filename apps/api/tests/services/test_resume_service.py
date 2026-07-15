@@ -1,5 +1,7 @@
 """Tests for ResumeService and related services."""
 
+import json
+
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -264,7 +266,7 @@ async def test_shot_remaining_period_end_is_last_day_of_month(db_session: AsyncS
 
 
 @pytest.mark.asyncio
-async def test_tailoring_service_basic(db_session: AsyncSession) -> None:
+async def test_tailoring_service_basic(db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
     user = User(id=new_ulid(), email="tailor@test.com", hashed_password="hash")
     db_session.add(user)
     await db_session.flush()
@@ -278,15 +280,30 @@ async def test_tailoring_service_basic(db_session: AsyncSession) -> None:
     )
     resume = await ResumeService(db_session).create(user.id, payload)
 
-    service = TailoringService()
-    sections = await service.tailor(resume, "Job description for Python dev")
+    fake_sections = {
+        "experiences": [{"company": "Acme", "title": "Engineer", "bullets": ["Built X (tailored)"]}],
+        "educations": [],
+        "skills": [{"name": "Python"}],
+        "summary": "Tailored engineer.",
+        "projects": [],
+        "certifications": [],
+    }
 
-    assert "experiences" in sections
-    assert len(sections["experiences"]) == 1
-    assert sections["experiences"][0]["company"] == "Acme"
-    assert "skills" in sections
-    assert sections["skills"][0]["name"] == "Python"
-    assert "summary" in sections
+    async def mock_call_ai(_prompt: str) -> str:
+        return json.dumps(fake_sections)
+
+    monkeypatch.setattr("app.services.tailoring_service.call_ai", mock_call_ai)
+
+    service = TailoringService(db_session)
+    tailored = await service.tailor(
+        master_resume_id=resume.id,
+        jd_text="Looking for a Python developer with 5 years experience in web development.",
+        user_id=user.id,
+    )
+
+    assert tailored.sections["experiences"][0]["company"] == "Acme"
+    assert tailored.sections["skills"][0]["name"] == "Python"
+    assert tailored.sections["summary"] == "Tailored engineer."
 
 
 # ── AutoFillService ─────────────────────────────────────────────────────────

@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # ── Sentry ───────────────────────────────────────
     SENTRY_DSN: str = ""
 
+    # ── AI / LLM ──────────────────────────────────────
+    AI_API_KEY: str = ""
+    AI_MODEL: str = "gpt-4o-mini"
+    AI_PROVIDER: str = "openai"
+
     # ── Rate Limiting ────────────────────────────────
     RATE_LIMIT_PER_MINUTE: int = 60
 

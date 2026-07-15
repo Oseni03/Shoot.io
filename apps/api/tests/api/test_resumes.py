@@ -1,5 +1,7 @@
 """Tests for resume API endpoints."""
 
+import json
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
@@ -273,7 +275,9 @@ async def test_shoot_no_master(client: AsyncClient, auth_headers: dict[str, str]
 
 
 @pytest.mark.asyncio
-async def test_shoot_success(client: AsyncClient, auth_headers: dict[str, str]) -> None:
+async def test_shoot_success(
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Create master resume first
     await client.post(
         "/api/v1/resumes",
@@ -286,6 +290,18 @@ async def test_shoot_success(client: AsyncClient, auth_headers: dict[str, str]) 
         },
         headers=auth_headers,
     )
+
+    async def mock_call_ai(_prompt: str) -> str:
+        return json.dumps({
+            "summary": "Tailored engineer.",
+            "experiences": [{"company": "Acme", "title": "Engineer", "bullets": ["Built X"], "sort_order": 0}],
+            "educations": [],
+            "skills": [{"name": "Python", "sort_order": 0}],
+            "projects": [],
+            "certifications": [],
+        })
+
+    monkeypatch.setattr("app.services.tailoring_service.call_ai", mock_call_ai)
 
     res = await client.post(
         "/api/v1/resumes/shoot",
@@ -315,7 +331,7 @@ async def test_shots_remaining(client: AsyncClient, auth_headers: dict[str, str]
 
 @pytest.mark.asyncio
 async def test_shoot_free_plan_limit_returns_402(
-    client: AsyncClient, auth_headers: dict[str, str]
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     await client.post(
         "/api/v1/resumes",
@@ -323,17 +339,29 @@ async def test_shoot_free_plan_limit_returns_402(
         headers=auth_headers,
     )
 
+    async def mock_call_ai(_prompt: str) -> str:
+        return json.dumps({
+            "summary": "Tailored.",
+            "experiences": [],
+            "educations": [],
+            "skills": [],
+            "projects": [],
+            "certifications": [],
+        })
+
+    monkeypatch.setattr("app.services.tailoring_service.call_ai", mock_call_ai)
+
     for _ in range(3):
         res = await client.post(
             "/api/v1/resumes/shoot",
-            json={"job_description_text": "We need a developer."},
+            json={"job_description_text": "We need a developer with at least five years of experience in the field."},
             headers=auth_headers,
         )
         assert res.status_code == 200
 
     res = await client.post(
         "/api/v1/resumes/shoot",
-        json={"job_description_text": "We need a developer."},
+        json={"job_description_text": "We need a developer with at least five years of experience in the field."},
         headers=auth_headers,
     )
     assert res.status_code == 402
@@ -367,7 +395,9 @@ async def _pro_auth_headers(db_session: AsyncSession) -> dict[str, str]:
 
 
 @pytest.mark.asyncio
-async def test_shoot_pro_plan_never_limited(client: AsyncClient, db_session: AsyncSession) -> None:
+async def test_shoot_pro_plan_never_limited(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
     headers = await _pro_auth_headers(db_session)
 
     await client.post(
@@ -376,10 +406,22 @@ async def test_shoot_pro_plan_never_limited(client: AsyncClient, db_session: Asy
         headers=headers,
     )
 
+    async def mock_call_ai(_prompt: str) -> str:
+        return json.dumps({
+            "summary": "Tailored.",
+            "experiences": [],
+            "educations": [],
+            "skills": [],
+            "projects": [],
+            "certifications": [],
+        })
+
+    monkeypatch.setattr("app.services.tailoring_service.call_ai", mock_call_ai)
+
     for _ in range(4):
         res = await client.post(
             "/api/v1/resumes/shoot",
-            json={"job_description_text": "We need a developer."},
+            json={"job_description_text": "We need a developer with at least five years of experience in the field."},
             headers=headers,
         )
         assert res.status_code == 200

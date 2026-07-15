@@ -4,9 +4,7 @@ from fastapi import APIRouter, Request, status
 
 from app.api.deps import DBDep, VerifiedUser
 from app.lib.logger import logger
-from app.lib.ulid import new_ulid
 from app.models.organization import PlanTier
-from app.models.resume import JobDescription, TailoredResume
 from app.models.user import User
 from app.repositories.resume_repo import ResumeRepository
 from app.schemas.resume import (
@@ -110,12 +108,11 @@ async def shoot(
 
     1. Get user's master resume (400 if none)
     2. Check plan limits (402 if exceeded)
-    3. Call tailoring service to produce tailored resume
+    3. Call tailoring service to produce tailored resume (also creates JD + TailoredResume)
     4. Record shot
     5. Call auto-fill service to map fields
     """
     resume_service = ResumeService(db)
-    tailoring_service = TailoringService()
     shot_service = ShotService(db)
     autofill_service = AutoFillService()
 
@@ -124,32 +121,19 @@ async def shoot(
     plan = _resolve_plan(current_user)
     await shot_service.assert_can_shoot(current_user.id, PlanTier(plan))
 
-    repo = ResumeRepository(db)
-    jd = JobDescription(
-        id=new_ulid(),
-        raw_text=payload.job_description_text,
-        source_url=payload.source_url,
-        job_title=payload.job_title,
-        company=payload.company,
-    )
-    await repo.create_job_description(jd)
-
-    sections = await tailoring_service.tailor(
-        master, payload.job_description_text, payload.job_title
-    )
-
-    tailored = TailoredResume(
-        id=new_ulid(),
+    tailoring_service = TailoringService(db)
+    tailored = await tailoring_service.tailor(
+        master_resume_id=master.id,
+        jd_text=payload.job_description_text,
         user_id=current_user.id,
-        source_resume_id=master.id,
-        job_description_id=jd.id,
-        sections=sections,
+        jd_source_url=payload.source_url,
+        jd_title=payload.job_title,
+        jd_company=payload.company,
     )
-    await repo.create_tailored_resume(tailored)
 
     await shot_service.record_shot(current_user.id)
 
-    auto_fill_fields = autofill_service.map_fields(sections)
+    auto_fill_fields = autofill_service.map_fields(tailored.sections)
 
     await AuditLogService(db).log(
         action="resume.shoot",
@@ -159,7 +143,7 @@ async def shoot(
         request=request,
         meta={
             "resume_id": master.id,
-            "job_description_id": jd.id,
+            "job_description_id": tailored.job_description_id,
             "job_title": payload.job_title,
             "company": payload.company,
         },
@@ -169,7 +153,7 @@ async def shoot(
         "resume.shoot",
         user_id=current_user.id,
         tailored_id=tailored.id,
-        jd_id=jd.id,
+        jd_id=tailored.job_description_id,
     )
 
     return ShootResponse(
