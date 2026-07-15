@@ -193,7 +193,7 @@ class ShootResponse(BaseModel):
 
 
 class ShotRemainingResponse(BaseModel):
-    shots_remaining: int
+    shots_remaining: int | None
     period_end: str
 
 

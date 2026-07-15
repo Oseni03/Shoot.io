@@ -30,7 +30,7 @@ from app.repositories.org_repo import OrganizationRepository
 
 PLAN_CODE_MAP: dict[PlanTier, str] = {
     PlanTier.PRO: settings.PAYSTACK_PRO_PLAN_CODE,
-    PlanTier.ENTERPRISE: settings.PAYSTACK_ENTERPRISE_PLAN_CODE,
+    PlanTier.ULTIMATE: settings.PAYSTACK_ULTIMATE_PLAN_CODE,
 }
 
 CODE_PLAN_MAP: dict[str, PlanTier] = {

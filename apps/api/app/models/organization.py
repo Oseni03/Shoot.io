@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 class PlanTier(str, enum.Enum):
     FREE = "free"
     PRO = "pro"
-    ENTERPRISE = "enterprise"
+    ENTERPRISE = "enterprise"  # legacy value — kept for zero-downtime rollback, see docs/issues/008
+    ULTIMATE = "ultimate"
 
 
 class Organization(Base, TimestampMixin):

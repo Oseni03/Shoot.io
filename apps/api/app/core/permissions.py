@@ -23,8 +23,14 @@ class PlanLimits:
     priority_support: bool
     max_shots_per_month: int | None
 
+    # Legacy plan names that map to a renamed PlanLimitsConfig entry. Orgs still
+    # holding the old enum value (pre-migration-sync) resolve to the new tier's
+    # limits — see docs/issues/008 rollback plan for why ENTERPRISE isn't dropped.
+    _LEGACY_PLAN_ALIASES = {"ENTERPRISE": "ULTIMATE"}
+
     def __init__(self, plan: PlanTier) -> None:
-        entry = getattr(project.plan_limits, plan.name)
+        key = self._LEGACY_PLAN_ALIASES.get(plan.name, plan.name)
+        entry = getattr(project.plan_limits, key)
         self.max_members = entry.max_members
         self.max_projects = entry.max_projects
         self.audit_log_retention_days = entry.audit_log_retention_days

@@ -8,7 +8,7 @@ A production-ready FastAPI backend with authentication, multi-tenant organizatio
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **Auth**          | Register, login, JWT access + refresh tokens, email verification, password reset, Google/GitHub OAuth, MFA-ready |
 | **Organizations** | Multi-tenant with member roles (Owner, Admin, Member, Viewer), invite-by-email flow                              |
-| **Billing**       | Stripe Checkout, Billing Portal, webhook handling, plan sync (Free / Pro / Enterprise)                           |
+| **Billing**       | Stripe Checkout, Billing Portal, webhook handling, plan sync (Free / Pro / Ultimate)                             |
 | **Email**         | Resend integration — verification, password reset, invitations, welcome email                                    |
 | **Notifications** | In-app notification center with read/unread state                                                                |
 | **Audit Log**     | Every sensitive action is logged with actor, resource, and IP                                                    |
@@ -96,7 +96,7 @@ EMAIL_FROM_NAME="Your SaaS"
 PAYSTACK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxx
 PAYSTACK_WEBHOOK_SECRET=your-webhook-secret-phrase
 PAYSTACK_PRO_PLAN_CODE=PLN_xxxxxxxxxxxxxxxxxxxx
-PAYSTACK_ENTERPRISE_PLAN_CODE=PLN_xxxxxxxxxxxxxxxxxxxx
+PAYSTACK_ULTIMATE_PLAN_CODE=PLN_xxxxxxxxxxxxxxxxxxxx
 
 # ── Sentry ────────────────────────────────────────────
 SENTRY_DSN=

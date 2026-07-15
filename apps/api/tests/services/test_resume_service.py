@@ -178,13 +178,13 @@ async def test_shot_service_pro_unlimited(db_session: AsyncSession) -> None:
 
     svc = ShotService(db_session)
 
-    for _ in range(3):
+    for _ in range(100):
         await svc.record_shot(user.id)
 
     # PRO is unlimited
     assert await svc.can_shoot(user.id, PlanTier.PRO) is True
     remaining = await svc.get_shots_remaining(user.id, PlanTier.PRO)
-    assert remaining == -1  # unlimited
+    assert remaining is None  # unlimited
 
 
 @pytest.mark.asyncio
@@ -196,7 +196,42 @@ async def test_shot_remaining_response(db_session: AsyncSession) -> None:
     svc = ShotService(db_session)
     result = await svc.remaining_response(user.id, PlanTier.FREE)
     assert result["shots_remaining"] == 3
-    assert "period_end" in result
+
+
+@pytest.mark.asyncio
+async def test_shot_remaining_decrements_to_zero_then_stays(db_session: AsyncSession) -> None:
+    user = User(id=new_ulid(), email="decrement@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    svc = ShotService(db_session)
+
+    expected = [3, 2, 1, 0]
+    for want in expected:
+        remaining = await svc.get_shots_remaining(user.id, PlanTier.FREE)
+        assert remaining == want
+        await svc.record_shot(user.id)
+
+    # 4th shot already recorded above; a 5th call still reads 0, not negative
+    assert await svc.get_shots_remaining(user.id, PlanTier.FREE) == 0
+
+
+@pytest.mark.asyncio
+async def test_shot_remaining_period_end_is_last_day_of_month(db_session: AsyncSession) -> None:
+    import calendar
+    from datetime import UTC, datetime
+
+    user = User(id=new_ulid(), email="periodend@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    svc = ShotService(db_session)
+    result = await svc.remaining_response(user.id, PlanTier.FREE)
+
+    now = datetime.now(UTC)
+    last_day = calendar.monthrange(now.year, now.month)[1]
+    expected = f"{now.year:04d}-{now.month:02d}-{last_day:02d}"
+    assert result["period_end"] == expected
 
 
 # ── TailoringService ────────────────────────────────────────────────────────

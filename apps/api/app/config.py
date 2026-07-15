@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     PAYSTACK_SECRET_KEY: str = ""
     PAYSTACK_WEBHOOK_SECRET: str = ""
     PAYSTACK_PRO_PLAN_CODE: str = ""
-    PAYSTACK_ENTERPRISE_PLAN_CODE: str = ""
+    PAYSTACK_ULTIMATE_PLAN_CODE: str = ""
 
     # ── Sentry ───────────────────────────────────────
     SENTRY_DSN: str = ""
@@ -193,7 +193,7 @@ class PlanLimitsConfig:
         mfa_required=False, sso_enabled=False, priority_support=True,
         max_shots_per_month=None,
     ))
-    ENTERPRISE: PlanLimitEntry = field(default_factory=lambda: PlanLimitEntry(
+    ULTIMATE: PlanLimitEntry = field(default_factory=lambda: PlanLimitEntry(
         max_members=None, max_projects=None, audit_log_retention_days=365,
         mfa_required=True, sso_enabled=True, priority_support=True,
         max_shots_per_month=None,

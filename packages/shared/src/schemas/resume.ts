@@ -96,7 +96,7 @@ export const ShootResponseSchema = z.object({
 });
 
 export const ShotRemainingSchema = z.object({
-	shots_remaining: z.number().int(),
+	shots_remaining: z.number().int().nullable(),
 	period_end: z.string(),
 });
 

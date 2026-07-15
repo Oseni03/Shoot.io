@@ -21,7 +21,7 @@ Enumeration of organizational roles with increasing privilege:
 Pricing tiers with assigned limits:
 - FREE: Limited to 5 members, 3 projects, basic features
 - PRO: 50 members, unlimited projects, priority support
-- ENTERPRISE: Unlimited members, security features enabled
+- ULTIMATE: Unlimited members, security features enabled (legacy `ENTERPRISE` value kept for zero-downtime migration)
 
 ### Resource
 Something within an Organization that can be accessed (projects, audit logs, billing, etc.)

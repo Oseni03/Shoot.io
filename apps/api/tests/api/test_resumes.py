@@ -2,6 +2,7 @@
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
@@ -208,3 +209,78 @@ async def test_shots_remaining(client: AsyncClient, auth_headers: dict[str, str]
     data = res.json()
     assert "shots_remaining" in data
     assert "period_end" in data
+
+
+@pytest.mark.asyncio
+async def test_shoot_free_plan_limit_returns_402(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    await client.post(
+        "/api/v1/resumes",
+        json={"title": "Master", "is_master": True},
+        headers=auth_headers,
+    )
+
+    for _ in range(3):
+        res = await client.post(
+            "/api/v1/resumes/shoot",
+            json={"job_description_text": "We need a developer."},
+            headers=auth_headers,
+        )
+        assert res.status_code == 200
+
+    res = await client.post(
+        "/api/v1/resumes/shoot",
+        json={"job_description_text": "We need a developer."},
+        headers=auth_headers,
+    )
+    assert res.status_code == 402
+
+    remaining = await client.get("/api/v1/resumes/shots/remaining", headers=auth_headers)
+    assert remaining.json()["shots_remaining"] == 0
+
+
+async def _pro_auth_headers(db_session: AsyncSession) -> dict[str, str]:
+    from app.core.security import create_access_token
+    from app.lib.ulid import new_ulid
+    from app.models.membership import MemberRole, Membership
+    from app.models.organization import Organization, PlanTier
+    from app.models.user import User
+
+    user = User(
+        id=new_ulid(),
+        email="pro-shoot@example.com",
+        hashed_password="hashed_placeholder",
+        is_verified=True,
+        is_active=True,
+    )
+    org = Organization(id=new_ulid(), name="Pro Org", slug="pro-org-shoot", plan=PlanTier.PRO)
+    db_session.add_all([user, org])
+    await db_session.flush()
+    db_session.add(
+        Membership(id=new_ulid(), user_id=user.id, organization_id=org.id, role=MemberRole.OWNER)
+    )
+    await db_session.flush()
+    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+
+
+@pytest.mark.asyncio
+async def test_shoot_pro_plan_never_limited(client: AsyncClient, db_session: AsyncSession) -> None:
+    headers = await _pro_auth_headers(db_session)
+
+    await client.post(
+        "/api/v1/resumes",
+        json={"title": "Master", "is_master": True},
+        headers=headers,
+    )
+
+    for _ in range(4):
+        res = await client.post(
+            "/api/v1/resumes/shoot",
+            json={"job_description_text": "We need a developer."},
+            headers=headers,
+        )
+        assert res.status_code == 200
+
+    remaining = await client.get("/api/v1/resumes/shots/remaining", headers=headers)
+    assert remaining.json()["shots_remaining"] is None
