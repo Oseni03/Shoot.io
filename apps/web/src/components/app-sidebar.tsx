@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings2, SquareTerminal } from "lucide-react";
+import { FileText, Settings2, SquareTerminal } from "lucide-react";
 import type * as React from "react";
 import { NavUser } from "@/components/nav-user";
 import { OrgSwitcher } from "@/components/org-switcher";
@@ -19,6 +19,12 @@ const navMain = [
 		title: "Dashboard",
 		url: "/dashboard",
 		icon: SquareTerminal,
+		isActive: true,
+	},
+	{
+		title: "Resumes",
+		url: "/dashboard/resumes",
+		icon: FileText,
 		isActive: true,
 	},
 	{

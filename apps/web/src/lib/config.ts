@@ -55,6 +55,11 @@ export const ROUTES = {
 
 	dashboard: {
 		root: "/dashboard",
+		resumes: {
+			root: "/dashboard/resumes",
+			new: "/dashboard/resumes/new",
+			edit: (id: string) => `/dashboard/resumes/${id}/edit`,
+		},
 		settings: {
 			root: "/dashboard/settings",
 			profile: "/dashboard/settings/profile",
@@ -66,7 +71,11 @@ export const ROUTES = {
 	},
 
 	get protectedPrefixes(): string[] {
-		return [this.dashboard.root, this.onboarding, this.invitations];
+		return [
+			this.dashboard.root,
+			this.onboarding,
+			this.invitations,
+		];
 	},
 
 	get authRoutes(): string[] {
@@ -130,6 +139,8 @@ export const QUERY_KEYS = {
 	organizations: ["organizations"] as const,
 	me: ["auth", "me"] as const,
 	user: ["user", "me"] as const,
+	resumes: ["resumes"] as const,
+	resume: (id: string) => ["resumes", id] as const,
 } as const;
 
 export const NAV_LINKS = [
