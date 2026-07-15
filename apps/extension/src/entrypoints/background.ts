@@ -230,14 +230,28 @@ async function handleMessage(
 					company,
 				};
 
-				const response = await fetch(url, {
-					method: "POST",
-					headers: {
-						Authorization: `${PROJECT.tokenType} ${access}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(body),
-				});
+				const doFetch = async (token: string) => {
+					return await fetch(url, {
+						method: "POST",
+						headers: {
+							Authorization: `${PROJECT.tokenType} ${token}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(body),
+					});
+				};
+
+				let response = await doFetch(access);
+
+				if (response.status === 401) {
+					const refreshed = await attemptRefresh();
+					if (refreshed) {
+						const newAccess = chromeTokenStore.getAccess();
+						if (newAccess) {
+							response = await doFetch(newAccess);
+						}
+					}
+				}
 
 				let responseBody: unknown;
 				try {

@@ -270,7 +270,7 @@ async def test_shoot_no_master(client: AsyncClient, auth_headers: dict[str, str]
         json={"job_description_text": "We need a Python developer."},
         headers=auth_headers,
     )
-    assert res.status_code == 404
+    assert res.status_code == 400
     assert "master" in res.json()["detail"].lower()
 
 

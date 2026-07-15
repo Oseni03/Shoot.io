@@ -706,6 +706,72 @@ describe("background message handlers", () => {
 				}
 			});
 
+			it("auto-refreshes token on 401 and retries", async () => {
+				let shootCalls = 0;
+				mockFetch.mockImplementation(
+					(url: string, init?: { method?: string }) => {
+						if (
+							url.includes("/resumes/shoot") &&
+							init?.method === "POST"
+						) {
+							shootCalls++;
+							if (shootCalls === 1) {
+								return Promise.resolve({
+									status: 401,
+									ok: false,
+									json: () =>
+										Promise.resolve({
+											detail: "Token expired",
+										}),
+								});
+							}
+							return Promise.resolve({
+								status: 200,
+								ok: true,
+								json: () =>
+									Promise.resolve({
+										tailored_resume_id: "tr_123",
+										auto_fill_fields: { summary: "Engineer" },
+									}),
+							});
+						}
+						if (url.includes("/auth/refresh")) {
+							return Promise.resolve({
+								status: 200,
+								ok: true,
+								json: () =>
+									Promise.resolve({
+										access_token: "at_refreshed",
+										refresh_token: "rt_refreshed",
+										token_type: "bearer",
+									}),
+							});
+						}
+						return Promise.resolve({
+							status: 404,
+							ok: false,
+							json: () =>
+								Promise.resolve({ detail: "Not found" }),
+						});
+					},
+				);
+
+				const response = await invokeHandler({
+					type: "SHOOT_JOB",
+					payload: {
+						jobDescriptionText: "We need a developer",
+						sourceUrl: "https://indeed.com",
+					},
+				});
+
+				expect(shootCalls).toBe(2);
+				expect(response.success).toBe(true);
+				if (response.success) {
+					const data = response.data as Record<string, unknown>;
+					expect(data.tailored_resume_id).toBe("tr_123");
+				}
+			});
+
 			it("returns error on shoot failure", async () => {
 				mockFetch.mockImplementation(
 					(url: string, init?: { method?: string }) => {

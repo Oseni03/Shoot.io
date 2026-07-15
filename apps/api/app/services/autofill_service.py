@@ -10,33 +10,47 @@ from typing import Any
 class AutoFillService:
     """Maps tailored resume data to form field values.
 
-    The output dict uses field names that map to Indeed's form field
-    selectors. Unknown fields are skipped gracefully.
+    The output dict uses field names that map to common job application form
+    field identifiers (name, email, phone, headline, summary, etc.).
+    Unknown fields are skipped gracefully.
     """
 
-    def map_fields(self, sections: dict[str, Any]) -> dict[str, str]:
+    def map_fields(
+        self,
+        sections: dict[str, Any],
+        user: dict[str, str] | None = None,
+    ) -> dict[str, str]:
         fields: dict[str, str] = {}
 
-        if sections.get("summary"):
-            fields["summary"] = sections["summary"]
+        if user:
+            fields["name"] = user.get("full_name", "")
+            fields["email"] = user.get("email", "")
+
+        fields["phone"] = ""
 
         experiences = sections.get("experiences", [])
         if experiences:
             latest = experiences[0]
-            fields["current_title"] = latest.get("title", "")
-            fields["current_company"] = latest.get("company", "")
-            if latest.get("bullets"):
-                fields["experience_bullets"] = "\n".join(latest["bullets"])
+            fields["headline"] = latest.get("title", "")
+
+        if sections.get("summary"):
+            fields["summary"] = sections["summary"]
+
+        for i, exp in enumerate(experiences):
+            prefix = f"experience_{i}"
+            fields[f"{prefix}_title"] = exp.get("title", "")
+            fields[f"{prefix}_company"] = exp.get("company", "")
+            if exp.get("bullets"):
+                fields[f"{prefix}_bullets"] = "\n".join(exp["bullets"])
 
         skills = sections.get("skills", [])
         if skills:
             skill_names = [s.get("name", "") for s in skills]
             fields["skills"] = ", ".join(skill_names)
 
-        educations = sections.get("educations", [])
-        if educations:
-            latest_edu = educations[0]
-            fields["highest_education"] = latest_edu.get("degree", "")
-            fields["school"] = latest_edu.get("school", "")
+        for i, edu in enumerate(sections.get("educations", [])):
+            prefix = f"education_{i}"
+            fields[f"{prefix}_degree"] = edu.get("degree", "")
+            fields[f"{prefix}_school"] = edu.get("school", "")
 
         return fields

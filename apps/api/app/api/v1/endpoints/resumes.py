@@ -133,7 +133,10 @@ async def shoot(
 
     await shot_service.record_shot(current_user.id)
 
-    auto_fill_fields = autofill_service.map_fields(tailored.sections)
+    auto_fill_fields = autofill_service.map_fields(
+        tailored.sections,
+        user={"full_name": current_user.full_name or "", "email": current_user.email},
+    )
 
     await AuditLogService(db).log(
         action="resume.shoot",

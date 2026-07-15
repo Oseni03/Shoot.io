@@ -62,7 +62,7 @@ class ResumeService:
     async def get_master(self, user_id: str) -> Resume:
         resume = await self.repo.get_master(user_id)
         if not resume:
-            raise NotFoundError("Master resume")
+            raise BadRequestError("No master resume")
         return resume
 
     async def list_by_user(self, user_id: str) -> list[Resume]:

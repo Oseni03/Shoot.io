@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.permissions import PlanLimits, assert_shot_available
 from app.lib.ulid import new_ulid
 from app.models.organization import PlanTier
@@ -73,7 +73,7 @@ async def test_get_master_not_found(db_session: AsyncSession) -> None:
     db_session.add(user)
     await db_session.flush()
 
-    with pytest.raises(NotFoundError, match="Master resume"):
+    with pytest.raises(BadRequestError, match="No master resume"):
         await ResumeService(db_session).get_master(user.id)
 
 
@@ -326,6 +326,23 @@ def test_autofill_basic() -> None:
 
     fields = service.map_fields(sections)
     assert fields["summary"] == "Experienced engineer."
-    assert fields["current_title"] == "Engineer"
-    assert fields["current_company"] == "Acme"
+    assert fields["headline"] == "Engineer"
+    assert fields["experience_0_title"] == "Engineer"
+    assert fields["experience_0_company"] == "Acme"
+    assert fields["experience_0_bullets"] == "Built X\nShipped Y"
     assert fields["skills"] == "Python, React"
+    assert fields["education_0_degree"] == "BS"
+    assert fields["education_0_school"] == "MIT"
+
+def test_autofill_with_user() -> None:
+    service = AutoFillService()
+    sections = {"summary": "Engineer."}
+    fields = service.map_fields(sections, user={"full_name": "John Doe", "email": "john@example.com"})
+    assert fields["name"] == "John Doe"
+    assert fields["email"] == "john@example.com"
+    assert fields["phone"] == ""
+
+def test_autofill_empty() -> None:
+    service = AutoFillService()
+    fields = service.map_fields({})
+    assert fields == {"phone": ""}

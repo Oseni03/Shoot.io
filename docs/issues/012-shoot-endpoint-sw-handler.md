@@ -48,15 +48,15 @@ No DB changes. No migration. Touches billing indirectly via shot-limit enforceme
 
 ## Acceptance criteria
 
-- [ ] `POST /api/v1/resumes/shoot` returns 200 with `{ tailored_resume_id, auto_fill_fields }` for a valid master resume + JD
-- [ ] Returns 400 if user has no master resume
-- [ ] Returns 402 if user has 0 shots remaining on FREE plan
-- [ ] Returns 400 if JD text is <50 characters
-- [ ] `AutoFillService.map_fields()` returns a flat dict with keys: `name`, `email`, `phone`, `headline`, `summary`, and one entry per experience/education/skill item labeled generically
-- [ ] Audit log entry `resume.shoot` is created with `user_id`, `meta.resume_id`, `meta.job_description_id`
-- [ ] Extension background handler successfully dispatches `SHOOT_JOB` message, calls the API, returns `auto_fill_fields` in response
-- [ ] Background handler returns structured error on HTTP 400/402 from API
-- [ ] Background handler auto-refreshes token if 401 received (reuses existing `attemptRefresh()`)
+- [x] `POST /api/v1/resumes/shoot` returns 200 with `{ tailored_resume_id, auto_fill_fields }` for a valid master resume + JD
+- [x] Returns 400 if user has no master resume
+- [x] Returns 402 if user has 0 shots remaining on FREE plan
+- [x] Returns 400 if JD text is <50 characters
+- [x] `AutoFillService.map_fields()` returns a flat dict with keys: `name`, `email`, `phone`, `headline`, `summary`, and one entry per experience/education/skill item labeled generically
+- [x] Audit log entry `resume.shoot` is created with `user_id`, `meta.resume_id`, `meta.job_description_id`
+- [x] Extension background handler successfully dispatches `SHOOT_JOB` message, calls the API, returns `auto_fill_fields` in response
+- [x] Background handler returns structured error on HTTP 400/402 from API
+- [x] Background handler auto-refreshes token if 401 received (reuses existing `attemptRefresh()`)
 
 ## Blocked by
 
