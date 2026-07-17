@@ -654,6 +654,32 @@ All endpoints require auth with admin role.
 
 ---
 
+## Resumes — `/resumes/*`
+
+### GET `/resumes/shots/remaining`
+
+Returns the number of shoot actions remaining in the current billing period. `null` means unlimited (PRO/Enterprise plan).
+
+**Headers:** `Authorization: bearer <token>`
+
+**Response (200):**
+
+```json
+{
+	"shots_remaining": 3,
+	"period_end": "2026-08-01T00:00:00Z"
+}
+```
+
+`shots_remaining` is `number | null`. `null` indicates unlimited usage (paid plans). `period_end` is an ISO 8601 date string representing when the counter resets.
+
+**Usage notes:**
+- FREE plan: `shots_remaining` is 0–3, never null
+- PRO/Enterprise plans: `shots_remaining` is `null` (unlimited)
+- The frontend renders the counter only when `shots_remaining` is not null and > 0; at 0 it shows an upgrade link
+
+---
+
 ## Error Response Format
 
 The frontend expects error bodies to match this shape:
