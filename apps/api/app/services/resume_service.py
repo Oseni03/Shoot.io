@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
+from app.core.exceptions import BadRequestError, NotFoundError
 from app.lib.logger import logger
 from app.lib.ulid import new_ulid
 from app.models.resume import (

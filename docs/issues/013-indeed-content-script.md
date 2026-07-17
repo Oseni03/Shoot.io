@@ -15,8 +15,8 @@ Build the WXT content script that runs on Indeed pages. This is the user-facing 
 - When modal is detected, inject a "Shoot" button next to the native "Continue" / "Submit" / "Next" button
 - Button styled to match Indeed's button design (blue bg, white text, matching border-radius and font size)
 - If no modal is detected within 5 seconds of page load, the content script enters standby (watches for dynamic modal injection)
-- If master resume is missing (checked via `chrome.runtime.sendMessage` to SW → `GET /resumes`), button is disabled with tooltip "Set up your master resume first"
-- If user is unauthenticated, button click opens the popup login
+- If master resume is missing, button is disabled with tooltip "Set up your master resume first". Checked via the existing `API_REQUEST` message type (`{ type: "API_REQUEST", payload: { path: "/resumes" } }`) — there is no dedicated message type for this, reuse `API_REQUEST` rather than adding a new one. Note: `API_REQUEST`'s handler does not auto-retry on a 401 the way `SHOOT_JOB`'s does — if the check returns "Not authenticated" on an expired-but-refreshable token, send `REFRESH` first and retry once before concluding the user truly has no master resume (otherwise a merely-expired token gets misread as "no master resume")
+- If user is unauthenticated, button click messages the service worker to call `chrome.action.openPopup()`. This API requires transient user activation, which is not reliably preserved across a content-script → SW message hop in every Chrome version — if the call throws or the popup doesn't visibly open within ~300ms, fall back to opening the web app's login page (`{VITE_FRONTEND_URL}/auth/login`) in a new tab. Confirm during manual dev testing which path actually fires — don't assume `openPopup()` alone is sufficient
 
 **On click (the Shoot flow):**
 1. Scrape job description text from the modal DOM (known selector fallback chain)
@@ -50,7 +50,8 @@ No DB changes. No migration. No billing impact. Requires host permission `*://in
 
 - [ ] Content script registers on `*://indeed.com/*` pages (verified by loading page in dev extension)
 - [ ] "Shoot" button appears in the apply modal when it opens (both initial load and dynamic injection)
-- [ ] Button is disabled with tooltip when user has no master resume (responds to extension state query)
+- [ ] Button is disabled with tooltip when user has no master resume (responds to extension state query via `API_REQUEST`, retries once via `REFRESH` before concluding "no master resume" on a 401)
+- [ ] When unauthenticated, clicking the button either opens the extension popup (`chrome.action.openPopup()`) or, if that fails, opens the web app's login page in a new tab — one of the two visibly happens, not neither
 - [ ] Clicking "Shoot" shows loading state, scrapes JD from the modal
 - [ ] On successful response, form fields are filled and native events dispatched
 - [ ] On error response, error toast is shown and button returns to idle

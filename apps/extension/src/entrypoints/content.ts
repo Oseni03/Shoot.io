@@ -1,11 +1,11 @@
+import { defineContentScript } from "wxt/utils/define-content-script";
 import type { PopupResponse } from "../types";
 
 const SELECTORS = {
-	modal: '[class*="modal"]',
 	applyButton: '[data-testid="apply-button"]',
 	jobDescription: '[class*="jobsearch-JobComponent-description"]',
 	descriptionFallback: '[class*="jobsearch-JobInfoHeader"]',
-	formInputs: 'input, select, textarea',
+	formInputs: "input, select, textarea",
 };
 
 let shootInProgress = false;
@@ -70,8 +70,7 @@ function fillFormField(fieldName: string, value: string): void {
 		const name = el.name?.toLowerCase() ?? "";
 		const id = el.id?.toLowerCase() ?? "";
 		const ariaLabel = el.getAttribute("aria-label")?.toLowerCase() ?? "";
-		const placeholder =
-			el.getAttribute("placeholder")?.toLowerCase() ?? "";
+		const placeholder = el.getAttribute("placeholder")?.toLowerCase() ?? "";
 
 		const matches = [name, id, ariaLabel, placeholder].some(
 			(label) => label.includes(fieldName) || fieldName.includes(label),
@@ -92,19 +91,20 @@ function fillFormField(fieldName: string, value: string): void {
 	}
 }
 
-function autoFillForm(
-	fields: Record<string, string>,
-): { filled: number; total: number } {
+function autoFillForm(fields: Record<string, string>): {
+	filled: number;
+	total: number;
+} {
 	for (const [fieldName, value] of Object.entries(fields)) {
 		fillFormField(fieldName, value);
 	}
-	return { filled: Object.keys(fields).length, total: Object.keys(fields).length };
+	return {
+		filled: Object.keys(fields).length,
+		total: Object.keys(fields).length,
+	};
 }
 
-function showToast(
-	message: string,
-	type: "loading" | "success" | "error",
-): void {
+function showToast(message: string, type: "loading" | "success" | "error"): void {
 	const existing = document.querySelector("#shoot-toast");
 	if (existing) existing.remove();
 
@@ -209,8 +209,9 @@ async function handleShoot(shootButton: HTMLButtonElement): Promise<void> {
 	}
 }
 
-function injectShootButton(modal: Element): void {
-	if (modal.querySelector("#shoot-button")) return;
+function injectShootButton(applyButton: Element): void {
+	const parent = applyButton.parentElement;
+	if (!parent || parent.querySelector("#shoot-button")) return;
 
 	const button = document.createElement("button");
 	button.id = "shoot-button";
@@ -229,27 +230,27 @@ function injectShootButton(modal: Element): void {
 
 	button.addEventListener("click", () => handleShoot(button));
 
-	const nativeButtons = modal.querySelector("button");
-	if (nativeButtons && nativeButtons.parentElement) {
-		nativeButtons.parentElement.appendChild(button);
-	} else {
-		modal.appendChild(button);
-	}
+	parent.appendChild(button);
 }
 
-async function init(): Promise<void> {
-	const modal = await waitForElement(SELECTORS.modal, 10000);
-	if (modal) {
-		injectShootButton(modal);
-	}
+function main(): void {
+	waitForElement(SELECTORS.applyButton, 10000).then((applyButton) => {
+		if (applyButton) injectShootButton(applyButton);
+	});
 
 	const observer = new MutationObserver(() => {
-		const modal = document.querySelector(SELECTORS.modal);
-		if (modal && !modal.querySelector("#shoot-button")) {
-			injectShootButton(modal);
+		const applyButton = document.querySelector(SELECTORS.applyButton);
+		if (
+			applyButton &&
+			!applyButton.parentElement?.querySelector("#shoot-button")
+		) {
+			injectShootButton(applyButton);
 		}
 	});
 	observer.observe(document.body, { childList: true, subtree: true });
 }
 
-init();
+export default defineContentScript({
+	matches: ["*://*.indeed.com/*"],
+	main,
+});

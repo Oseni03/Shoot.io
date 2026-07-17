@@ -127,13 +127,75 @@ Read at session start before writing any code, tests, or issue descriptions.
 
 ---
 
+### Resume
+
+**What it is:** A user-authored resume made of six sections (Experience, Education, Skill, Summary, Project, Certification). Scoped to User, not Organization — a deliberate departure from the org-isolation pattern (see [ADR 0001](docs/adr/0001-chrome-extension-architecture.md) context and [PRD 001](docs/prd/001-shoot-one-click-resume-tailoring.md)).
+
+**Relationships:**
+- Belongs to one User
+- Has many ResumeExperience, ResumeEducation, ResumeSkill, ResumeProject, ResumeCertification (each ordered by `sort_order`)
+- Has one ResumeSummary (one-to-one)
+- Has many TailoredResume (as `source_resume`, nullable — nulled if the source Resume is deleted)
+
+**Invariants:**
+- Exactly one `is_master: true` Resume per User, enforced by a partial unique index (`ix_resume_master_per_user`) — not by application-level rejection. Setting a new master silently unsets the previous one (`ResumeService.set_master()` / `create()`); there is no "master already exists" error path.
+- A Resume with no master flag is a plain draft; a user may have any number of non-master resumes.
+
+**Agent note:** The "master resume" is what `TailoringService` reads from — `ResumeService.get_master(user_id)` raises `BadRequestError("No master resume")` if none is set. There is no `ConflictError` raised anywhere in the master-invariant path; don't add one without also updating this note and `docs/issues/009-resume-crud-master-invariant.md`.
+
+---
+
+### JobDescription
+
+**What it is:** A scraped/submitted job posting, stored for provenance whenever a resume is tailored against it.
+
+**Relationships:**
+- Has many TailoredResume
+
+**Invariants:**
+- `raw_text` required; `source_url`, `job_title`, `company` are optional/best-effort (parsed from the page by the extension content script)
+- Immutable after creation — no update path
+
+---
+
+### TailoredResume
+
+**What it is:** An immutable snapshot of AI-tailored resume content produced by one "Shoot" (see Glossary), tied to the source Resume and the JobDescription it was tailored against.
+
+**Relationships:**
+- Belongs to one User
+- Belongs to one JobDescription
+- Optionally references a source Resume (`source_resume_id` nullable — survives deletion of the source)
+
+**Invariants:**
+- `sections` (JSON) mirrors the same section keys as the master Resume (experience, education, skills, summary, projects, certifications) at time of tailoring
+- Never updated in place — a re-Shoot creates a new TailoredResume, never a diff or version chain (no undo/history, by design — see PRD 001 Out of Scope)
+
+---
+
+### UserMonthlyUsage
+
+**What it is:** The shot-counter row backing plan-limit enforcement for the Shoot feature. One row per User per calendar month.
+
+**Relationships:**
+- Belongs to one User
+
+**Invariants:**
+- Unique on `(user_id, period_start)` — `period_start` is always the first day of a calendar month (DATE, not TIMESTAMP)
+- Upserted by `ShotService.record_shot()`; never read/written outside `ShotService`/`ResumeRepository`'s usage methods
+- Resets are implicit — a new month means a new `period_start` row, not a reset of the old one
+
+**Agent note:** `ShotService.get_shots_remaining()` returns `None` for unlimited plans (PRO/ULTIMATE) rather than a large int — preserve that contract, `null` is the documented API response shape (`GET /api/v1/resumes/shots/remaining`).
+
+---
+
 ### PlanTier
 
-**Enum values:** `FREE`, `PRO`, `ENTERPRISE`
+**Enum values:** `FREE`, `PRO`, `ULTIMATE` (`ENTERPRISE` is a legacy value kept only for zero-downtime rollback of the [docs/issues/008](docs/issues/008-plan-tiers-shot-tracking.md) rename — do not use it in new code)
 
-**Plan limits defined in `project.plan_limits`:**
+**Plan limits defined in `PlanLimitsConfig` (`app/config.py`):**
 
-| Limit | FREE | PRO | ENTERPRISE |
+| Limit | FREE | PRO | ULTIMATE |
 |-------|------|-----|------------|
 | max_members | 5 | 50 | unlimited |
 | max_projects | 3 | unlimited | unlimited |
@@ -141,6 +203,7 @@ Read at session start before writing any code, tests, or issue descriptions.
 | mfa_required | no | no | yes |
 | sso_enabled | no | no | yes |
 | priority_support | no | yes | yes |
+| max_shots_per_month | 3 | unlimited | unlimited |
 
 ---
 
@@ -185,6 +248,10 @@ Default is `LOCAL`. OAuth users have `is_verified: true` set at registration.
 | accept | Join an Organization by accepting an invitation | `OrganizationService.accept_invitation()` |
 | initialize | Begin a Paystack checkout for a plan upgrade | `BillingService.initialize_transaction()` |
 | verify | Confirm a Paystack payment and sync the plan | `BillingService.verify_transaction()` |
+| set master | Mark one Resume as the user's master, silently unmarking any prior master | `ResumeService.set_master()` |
+| tailor | Rewrite a master Resume's sections against a JobDescription via AI | `TailoringService.tailor()` |
+| shoot | The end-to-end flow: tailor + record a shot + map auto-fill fields, from one click on Indeed | `POST /api/v1/resumes/shoot` |
+| record shot | Increment a user's monthly usage counter after a successful Shoot | `ShotService.record_shot()` |
 
 ---
 
@@ -198,3 +265,6 @@ Default is `LOCAL`. OAuth users have `is_verified: true` set at registration.
 | snake_case | Naming convention for API JSON keys (backend returns, frontend validates via `snakeCaseSchema()`) |
 | TokenStore | Interface for auth token persistence — different implementations per client (localStorage for web, chrome.storage for extension) |
 | Extension | A Chrome Extension app in this monorepo, sharing auth, API client, and schemas with the web app |
+| Master Resume | The single Resume per User flagged `is_master: true` — the source `TailoringService` reads from. Exactly one exists at a time, enforced by a DB partial unique index |
+| Shoot / Shot | "Shoot" is the user-facing action (one click on Indeed); "shot" is the billable unit it consumes against `max_shots_per_month`. See `docs/prd/001-shoot-one-click-resume-tailoring.md` |
+| Auto-fill | The flat field→value dict (`AutoFillService.map_fields()`) used by the extension content script to fill an Indeed application form after a Shoot |
