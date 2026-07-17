@@ -51,7 +51,7 @@ async def test_mfa_setup_twice_fails(client: AsyncClient) -> None:
 
     # Verify to activate
     code = _valid_totp(secret)
-    res = await client.post(f"/api/v1/mfa/verify?code={code}", headers=auth_header(token))
+    res = await client.post("/api/v1/mfa/verify", json={"code": code}, headers=auth_header(token))
     assert res.status_code == 204
 
     # Second setup should fail
@@ -79,7 +79,7 @@ async def test_mfa_verify(client: AsyncClient) -> None:
 
     # Verify with valid TOTP
     code = _valid_totp(secret)
-    res = await client.post(f"/api/v1/mfa/verify?code={code}", headers=auth_header(token))
+    res = await client.post("/api/v1/mfa/verify", json={"code": code}, headers=auth_header(token))
     assert res.status_code == 204
 
     # Confirm MFA is now active on the user
@@ -93,7 +93,7 @@ async def test_mfa_verify_invalid_code(client: AsyncClient) -> None:
 
     await client.post("/api/v1/mfa/setup", headers=auth_header(token))
 
-    res = await client.post("/api/v1/mfa/verify?code=000000", headers=auth_header(token))
+    res = await client.post("/api/v1/mfa/verify", json={"code": "000000"}, headers=auth_header(token))
     assert res.status_code == 400
     assert "invalid" in res.json()["detail"].lower()
 
@@ -101,7 +101,7 @@ async def test_mfa_verify_invalid_code(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_mfa_verify_without_setup(client: AsyncClient) -> None:
     token = await _register_and_login(client, "verifyno@example.com")
-    res = await client.post("/api/v1/mfa/verify?code=123456", headers=auth_header(token))
+    res = await client.post("/api/v1/mfa/verify", json={"code": "123456"}, headers=auth_header(token))
     assert res.status_code == 400
     assert "setup first" in res.json()["detail"].lower()
 
@@ -117,11 +117,11 @@ async def test_mfa_disable(client: AsyncClient) -> None:
     res = await client.post("/api/v1/mfa/setup", headers=auth_header(token))
     secret = res.json()["secret"]
     code = _valid_totp(secret)
-    await client.post(f"/api/v1/mfa/verify?code={code}", headers=auth_header(token))
+    await client.post("/api/v1/mfa/verify", json={"code": code}, headers=auth_header(token))
 
     # Now disable
     code = _valid_totp(secret)
-    res = await client.post(f"/api/v1/mfa/disable?code={code}", headers=auth_header(token))
+    res = await client.post("/api/v1/mfa/disable", json={"code": code}, headers=auth_header(token))
     assert res.status_code == 204
 
     # Confirm MFA is off
@@ -136,16 +136,16 @@ async def test_mfa_disable_invalid_code(client: AsyncClient) -> None:
     res = await client.post("/api/v1/mfa/setup", headers=auth_header(token))
     secret = res.json()["secret"]
     code = _valid_totp(secret)
-    await client.post(f"/api/v1/mfa/verify?code={code}", headers=auth_header(token))
+    await client.post("/api/v1/mfa/verify", json={"code": code}, headers=auth_header(token))
 
-    res = await client.post("/api/v1/mfa/disable?code=000000", headers=auth_header(token))
+    res = await client.post("/api/v1/mfa/disable", json={"code": "000000"}, headers=auth_header(token))
     assert res.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_mfa_disable_not_enabled(client: AsyncClient) -> None:
     token = await _register_and_login(client, "disableno@example.com")
-    res = await client.post("/api/v1/mfa/disable?code=123456", headers=auth_header(token))
+    res = await client.post("/api/v1/mfa/disable", json={"code": "123456"}, headers=auth_header(token))
     assert res.status_code == 400
     assert "not enabled" in res.json()["detail"].lower()
 
@@ -163,7 +163,7 @@ async def test_login_returns_mfa_pending_when_mfa_enabled(client: AsyncClient) -
     res = await client.post("/api/v1/mfa/setup", headers=auth_header(token))
     secret = res.json()["secret"]
     code = _valid_totp(secret)
-    await client.post(f"/api/v1/mfa/verify?code={code}", headers=auth_header(token))
+    await client.post("/api/v1/mfa/verify", json={"code": code}, headers=auth_header(token))
 
     # Now login again — should get MFA pending token, not full tokens
     res = await client.post(
@@ -189,7 +189,7 @@ async def test_mfa_validate(client: AsyncClient) -> None:
     res = await client.post("/api/v1/mfa/setup", headers=auth_header(token))
     secret = res.json()["secret"]
     code = _valid_totp(secret)
-    await client.post(f"/api/v1/mfa/verify?code={code}", headers=auth_header(token))
+    await client.post("/api/v1/mfa/verify", json={"code": code}, headers=auth_header(token))
 
     # Login to get pending token
     res = await client.post(
@@ -201,7 +201,8 @@ async def test_mfa_validate(client: AsyncClient) -> None:
     # Validate with valid TOTP
     code = _valid_totp(secret)
     res = await client.post(
-        f"/api/v1/mfa/validate?code={code}",
+        "/api/v1/mfa/validate",
+        json={"code": code},
         headers=auth_header(pending_token),
     )
     assert res.status_code == 200
@@ -219,7 +220,7 @@ async def test_mfa_validate_invalid_code(client: AsyncClient) -> None:
     res = await client.post("/api/v1/mfa/setup", headers=auth_header(token))
     secret = res.json()["secret"]
     code = _valid_totp(secret)
-    await client.post(f"/api/v1/mfa/verify?code={code}", headers=auth_header(token))
+    await client.post("/api/v1/mfa/verify", json={"code": code}, headers=auth_header(token))
 
     res = await client.post(
         "/api/v1/auth/login",
@@ -228,7 +229,8 @@ async def test_mfa_validate_invalid_code(client: AsyncClient) -> None:
     pending_token = res.json()["mfa_pending"]
 
     res = await client.post(
-        "/api/v1/mfa/validate?code=000000",
+        "/api/v1/mfa/validate",
+        json={"code": "000000"},
         headers=auth_header(pending_token),
     )
     assert res.status_code == 401
@@ -243,12 +245,13 @@ async def test_mfa_validate_with_access_token_fails(client: AsyncClient) -> None
     res = await client.post("/api/v1/mfa/setup", headers=auth_header(token))
     secret = res.json()["secret"]
     code = _valid_totp(secret)
-    await client.post(f"/api/v1/mfa/verify?code={code}", headers=auth_header(token))
+    await client.post("/api/v1/mfa/verify", json={"code": code}, headers=auth_header(token))
 
     # Try /mfa/validate with an access token instead of a pending token
     code = _valid_totp(secret)
     res = await client.post(
-        f"/api/v1/mfa/validate?code={code}",
+        "/api/v1/mfa/validate",
+        json={"code": code},
         headers=auth_header(token),
     )
     assert res.status_code == 401
@@ -256,7 +259,7 @@ async def test_mfa_validate_with_access_token_fails(client: AsyncClient) -> None
 
 @pytest.mark.asyncio
 async def test_mfa_validate_unauthenticated(client: AsyncClient) -> None:
-    res = await client.post("/api/v1/mfa/validate?code=123456")
+    res = await client.post("/api/v1/mfa/validate", json={"code": "123456"})
     assert res.status_code == 401
 
 

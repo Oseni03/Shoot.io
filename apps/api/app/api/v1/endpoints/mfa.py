@@ -13,9 +13,8 @@ from fastapi import APIRouter, status
 from app.api.deps import CurrentUser, DBDep, MfaPendingUser
 from app.config import project
 from app.core.exceptions import BadRequestError, UnauthorizedError
-from app.core.security import verify_password
 from app.repositories.user_repo import UserRepository
-from app.schemas.auth import TokenPair
+from app.schemas.auth import TokenPair, TotpCodeRequest
 
 router = APIRouter(prefix="/mfa", tags=["mfa"])
 
@@ -48,7 +47,7 @@ async def setup_mfa(current_user: CurrentUser, db: DBDep) -> dict:
 
 
 @router.post("/verify", status_code=status.HTTP_204_NO_CONTENT)
-async def verify_mfa(code: str, current_user: CurrentUser, db: DBDep) -> None:
+async def verify_mfa(body: TotpCodeRequest, current_user: CurrentUser, db: DBDep) -> None:
     """Confirm the TOTP code to activate MFA."""
     if not current_user.mfa_secret:
         raise BadRequestError("Call /mfa/setup first.")
@@ -56,7 +55,7 @@ async def verify_mfa(code: str, current_user: CurrentUser, db: DBDep) -> None:
         raise BadRequestError("MFA is already enabled.")
 
     totp = _get_totp(current_user.mfa_secret, current_user.email)
-    if not totp.verify(code, valid_window=project.mfa.valid_window):
+    if not totp.verify(body.code, valid_window=project.mfa.valid_window):
         raise BadRequestError("Invalid or expired TOTP code.")
 
     current_user.mfa_enabled = True
@@ -64,13 +63,13 @@ async def verify_mfa(code: str, current_user: CurrentUser, db: DBDep) -> None:
 
 
 @router.post("/disable", status_code=status.HTTP_204_NO_CONTENT)
-async def disable_mfa(code: str, current_user: CurrentUser, db: DBDep) -> None:
+async def disable_mfa(body: TotpCodeRequest, current_user: CurrentUser, db: DBDep) -> None:
     """Disable MFA. Requires a valid current TOTP code."""
     if not current_user.mfa_enabled or not current_user.mfa_secret:
         raise BadRequestError("MFA is not enabled on your account.")
 
     totp = _get_totp(current_user.mfa_secret, current_user.email)
-    if not totp.verify(code, valid_window=project.mfa.valid_window):
+    if not totp.verify(body.code, valid_window=project.mfa.valid_window):
         raise UnauthorizedError("Invalid TOTP code.")
 
     current_user.mfa_enabled = False
@@ -79,7 +78,7 @@ async def disable_mfa(code: str, current_user: CurrentUser, db: DBDep) -> None:
 
 
 @router.post("/validate")
-async def validate_mfa_code(code: str, user: MfaPendingUser) -> TokenPair:
+async def validate_mfa_code(body: TotpCodeRequest, user: MfaPendingUser) -> TokenPair:
     """
     Validate a TOTP code during login.
     Frontend calls this after obtaining a short-lived 'mfa_pending' token
@@ -89,7 +88,7 @@ async def validate_mfa_code(code: str, user: MfaPendingUser) -> TokenPair:
         raise BadRequestError("MFA is not enabled on your account.")
 
     totp = _get_totp(user.mfa_secret, user.email)
-    if not totp.verify(code, valid_window=project.mfa.valid_window):
+    if not totp.verify(body.code, valid_window=project.mfa.valid_window):
         raise UnauthorizedError("Invalid or expired TOTP code.")
 
     from app.core.security import create_access_token, create_refresh_token

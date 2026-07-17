@@ -88,13 +88,15 @@ async function handleMessage(
 
 			case "MFA_VALIDATE": {
 				const { code, mfaToken } = message.payload;
-				const url = `${API_BASE}${"/mfa/validate"}?code=${encodeURIComponent(code)}`;
+				const url = `${API_BASE}/mfa/validate`;
 
 				const response = await fetch(url, {
 					method: "POST",
 					headers: {
 						Authorization: `${PROJECT.tokenType} ${mfaToken}`,
+						"Content-Type": "application/json",
 					},
+					body: JSON.stringify({ code }),
 				});
 
 				let body: unknown;

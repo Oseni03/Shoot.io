@@ -192,11 +192,13 @@ describe("background message handlers", () => {
 	describe("MFA_VALIDATE", () => {
 		it("validates TOTP and returns tokens with user", async () => {
 			mockFetch.mockImplementation(
-				(url: string, init?: { method?: string }) => {
+				(url: string, init?: { method?: string; body?: string }) => {
 					if (
 						url.includes("/mfa/validate") &&
 						init?.method === "POST"
 					) {
+						const body = JSON.parse(init?.body ?? "{}");
+						expect(body).toEqual({ code: "123456" });
 						return Promise.resolve({
 							status: 200,
 							ok: true,
@@ -250,11 +252,13 @@ describe("background message handlers", () => {
 
 		it("returns error on invalid TOTP", async () => {
 			mockFetch.mockImplementation(
-				(url: string, init?: { method?: string }) => {
+				(url: string, init?: { method?: string; body?: string }) => {
 					if (
 						url.includes("/mfa/validate") &&
 						init?.method === "POST"
 					) {
+						const body = JSON.parse(init?.body ?? "{}");
+						expect(body).toEqual({ code: "000000" });
 						return Promise.resolve({
 							status: 401,
 							ok: false,
