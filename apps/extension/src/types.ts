@@ -30,7 +30,8 @@ export type PopupMessage =
 				company?: string;
 			};
 	  }
-	| { type: "OPEN_POPUP" };
+	| { type: "OPEN_POPUP" }
+	| { type: "GET_SHOTS_REMAINING" };
 
 export type PopupResponse =
 	| { success: true; data: TokenPair & { user?: UserResponse } }

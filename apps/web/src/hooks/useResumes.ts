@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { resumeService } from "@/lib/api-services/resume";
+import {
+	resumeService,
+	type ShotsRemainingResponse,
+} from "@/lib/api-services/resume";
 import type { ResumeListEntry, ResumeResponse } from "@/schemas";
 
 export const RESUMES_KEY = ["resumes"] as const;
@@ -63,5 +66,15 @@ export function useSetMasterResume() {
 			queryClient.invalidateQueries({ queryKey: RESUMES_KEY });
 			queryClient.setQueryData(RESUME_KEY(updated.id), updated);
 		},
+	});
+}
+
+export const SHOTS_REMAINING_KEY = ["shots-remaining"] as const;
+
+export function useShotsRemaining() {
+	return useQuery<ShotsRemainingResponse>({
+		queryKey: SHOTS_REMAINING_KEY,
+		queryFn: () => resumeService.getShotsRemaining(),
+		staleTime: 5 * 60 * 1000,
 	});
 }

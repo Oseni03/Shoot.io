@@ -351,6 +351,98 @@ describe("background message handlers", () => {
 		});
 	});
 
+	describe("GET_SHOTS_REMAINING", () => {
+		describe("authenticated", () => {
+			beforeEach(async () => {
+				mockStorage.access_token = "at_valid";
+				mockStorage.refresh_token = "rt_valid";
+				const { initializeTokenStore } = await import("../token-store");
+				await initializeTokenStore();
+			});
+
+			it("returns shots remaining count for FREE plan", async () => {
+				registerFetchResponse("GET", "/resumes/shots/remaining", 200, {
+					shots_remaining: 3,
+					period_end: "2026-08-01T00:00:00Z",
+				});
+
+				const response = await invokeHandler({
+					type: "GET_SHOTS_REMAINING",
+				});
+
+				expect(response.success).toBe(true);
+				if (response.success) {
+					const data = response.data as Record<string, unknown>;
+					expect(data.shots_remaining).toBe(3);
+				}
+			});
+
+			it("returns null shots remaining for PRO/ULTIMATE plan", async () => {
+				registerFetchResponse("GET", "/resumes/shots/remaining", 200, {
+					shots_remaining: null,
+					period_end: "2026-08-01T00:00:00Z",
+				});
+
+				const response = await invokeHandler({
+					type: "GET_SHOTS_REMAINING",
+				});
+
+				expect(response.success).toBe(true);
+				if (response.success) {
+					const data = response.data as Record<string, unknown>;
+					expect(data.shots_remaining).toBeNull();
+				}
+			});
+
+			it("returns 0 shots remaining for exhausted FREE plan", async () => {
+				registerFetchResponse("GET", "/resumes/shots/remaining", 200, {
+					shots_remaining: 0,
+					period_end: "2026-08-01T00:00:00Z",
+				});
+
+				const response = await invokeHandler({
+					type: "GET_SHOTS_REMAINING",
+				});
+
+				expect(response.success).toBe(true);
+				if (response.success) {
+					const data = response.data as Record<string, unknown>;
+					expect(data.shots_remaining).toBe(0);
+				}
+			});
+
+			it("includes period_end in response", async () => {
+				registerFetchResponse("GET", "/resumes/shots/remaining", 200, {
+					shots_remaining: 2,
+					period_end: "2026-09-01T00:00:00Z",
+				});
+
+				const response = await invokeHandler({
+					type: "GET_SHOTS_REMAINING",
+				});
+
+				expect(response.success).toBe(true);
+				if (response.success) {
+					const data = response.data as Record<string, unknown>;
+					expect(data.period_end).toBe("2026-09-01T00:00:00Z");
+				}
+			});
+		});
+
+		describe("unauthenticated", () => {
+			it("returns error when not authenticated", async () => {
+				const response = await invokeHandler({
+					type: "GET_SHOTS_REMAINING",
+				});
+
+				expect(response.success).toBe(false);
+				if (!response.success) {
+					expect(response.code).toBe("UNAUTHORIZED");
+				}
+			});
+		});
+	});
+
 	describe("LOGIN", () => {
 		it("returns user on successful login", async () => {
 			registerFetchResponse("POST", "/auth/login", 200, {

@@ -42,6 +42,55 @@ function sendMessage(message: PopupMessage): Promise<PopupResponse> {
 
 function App() {
 	const [view, setView] = useState<ViewState>({ screen: "loading" });
+	const [shotsRemaining, setShotsRemaining] = useState<
+		number | null | undefined
+	>(undefined);
+	const [shotsLoading, setShotsLoading] = useState(false);
+
+	const loadShotsRemaining = useCallback(async () => {
+		setShotsLoading(true);
+		const res = await sendMessage({ type: "GET_SHOTS_REMAINING" });
+		if (res.success) {
+			const data = res.data as { shots_remaining: number | null };
+			setShotsRemaining(data.shots_remaining);
+		}
+		setShotsLoading(false);
+	}, []);
+
+	function renderShotsInfo() {
+		if (shotsLoading || shotsRemaining === undefined) return null;
+		if (shotsRemaining === null) return null;
+		if (shotsRemaining > 0) {
+			return (
+				<p
+					style={{
+						fontSize: 11,
+						color: "#6b7280",
+						margin: "4px 0 0",
+					}}
+				>
+					{shotsRemaining} shot
+					{shotsRemaining === 1 ? "" : "s"} left this month
+				</p>
+			);
+		}
+		return (
+			<a
+				href={`${FRONTEND_URL}/dashboard/settings/billing`}
+				target="_blank"
+				rel="noopener noreferrer"
+				style={{
+					fontSize: 11,
+					color: "#2563eb",
+					margin: "4px 0 0",
+					display: "inline-block",
+					textDecoration: "underline",
+				}}
+			>
+				Upgrade to PRO for unlimited shots →
+			</a>
+		);
+	}
 
 	// Login form state
 	const [loginEmail, setLoginEmail] = useState("");
@@ -157,8 +206,15 @@ function App() {
 		if (loginData.user) {
 			setLoginPending(false);
 			setView({ screen: "authenticated", user: loginData.user });
+			loadShotsRemaining();
 		}
-	}, [loginEmail, loginPassword, clearLoginErrors, handleApiError]);
+	}, [
+		loginEmail,
+		loginPassword,
+		clearLoginErrors,
+		handleApiError,
+		loadShotsRemaining,
+	]);
 
 	const handleLogin = useCallback(
 		async (e: React.FormEvent) => {
@@ -200,6 +256,7 @@ function App() {
 			setRegPending(false);
 			resetRegForm();
 			setView({ screen: "authenticated", user: regData.user });
+			loadShotsRemaining();
 		}
 	}, [
 		regEmail,
@@ -208,6 +265,7 @@ function App() {
 		clearRegErrors,
 		handleApiError,
 		resetRegForm,
+		loadShotsRemaining,
 	]);
 
 	const handleRegister = useCallback(
@@ -250,8 +308,9 @@ function App() {
 		if (tokenData.user) {
 			setMfaPending(false);
 			setView({ screen: "authenticated", user: tokenData.user });
+			loadShotsRemaining();
 		}
-	}, [mfaCode, view]);
+	}, [mfaCode, view, loadShotsRemaining]);
 
 	const handleMfaSubmit = useCallback(
 		async (e: React.FormEvent) => {
@@ -300,10 +359,11 @@ function App() {
 				screen: "authenticated",
 				user: res.data as UserResponse,
 			});
+			loadShotsRemaining();
 		} else {
 			setView({ screen: "login" });
 		}
-	}, []);
+	}, [loadShotsRemaining]);
 
 	useEffect(() => {
 		checkAuth();
@@ -379,6 +439,7 @@ function App() {
 						>
 							{user.email}
 						</p>
+						{renderShotsInfo()}
 					</div>
 				</div>
 				<button

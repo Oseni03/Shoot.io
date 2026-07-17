@@ -1,7 +1,5 @@
 import { z } from "zod";
-import {
-	API_ENDPOINTS,
-} from "@/lib/config";
+import { API_ENDPOINTS } from "@/lib/config";
 import {
 	type ResumeListEntry,
 	ResumeListEntrySchema,
@@ -10,6 +8,11 @@ import {
 } from "@/schemas";
 import api from "../api";
 import { snakeCaseSchema } from "../utils";
+
+export type ShotsRemainingResponse = {
+	shots_remaining: number | null;
+	period_end: string;
+};
 
 export const resumeService = {
 	list: async (): Promise<ResumeListEntry[]> => {
@@ -33,6 +36,16 @@ export const resumeService = {
 	): Promise<ResumeResponse> => {
 		const res = await api.put<any>(API_ENDPOINTS.resumes.resume(id), data);
 		return snakeCaseSchema(ResumeResponseSchema).parse(res.data);
+	},
+
+	getShotsRemaining: async (): Promise<ShotsRemainingResponse> => {
+		const res = await api.get<any>(API_ENDPOINTS.resumes.shotsRemaining);
+		return snakeCaseSchema(
+			z.object({
+				shots_remaining: z.number().nullable(),
+				period_end: z.string(),
+			}),
+		).parse(res.data);
 	},
 
 	delete: async (id: string): Promise<void> => {

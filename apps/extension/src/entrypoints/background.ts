@@ -144,6 +144,44 @@ async function handleMessage(
 				break;
 			}
 
+			case "GET_SHOTS_REMAINING": {
+				const access = chromeTokenStore.getAccess();
+				if (!access) {
+					sendResponse({
+						success: false,
+						error: "Not authenticated",
+						code: "UNAUTHORIZED",
+					});
+					return;
+				}
+
+				const url = `${API_BASE}/resumes/shots/remaining`;
+				const response = await fetch(url, {
+					headers: {
+						Authorization: `${PROJECT.tokenType} ${access}`,
+					},
+				});
+
+				let body: unknown;
+				try {
+					body = await response.json();
+				} catch {
+					body = {};
+				}
+
+				if (!response.ok) {
+					const detail =
+						(body as Record<string, unknown>)?.detail ??
+						(body as Record<string, unknown>)?.message ??
+						`Request failed with status ${response.status}`;
+					sendResponse({ success: false, error: String(detail) });
+					return;
+				}
+
+				sendResponse({ success: true, data: body });
+				break;
+			}
+
 			case "LOGOUT": {
 				await authService.logout();
 				sendResponse({ success: true, data: null });

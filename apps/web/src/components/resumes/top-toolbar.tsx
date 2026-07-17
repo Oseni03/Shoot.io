@@ -1,14 +1,10 @@
 "use client";
 
-import {
-	CheckCircle2,
-	Loader2,
-	Save,
-	Upload,
-} from "lucide-react";
+import { CheckCircle2, Loader2, Save, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useShotsRemaining } from "@/hooks/useResumes";
 import { cn } from "@/lib/utils";
 
 interface TopToolbarProps {
@@ -77,6 +73,8 @@ export function TopToolbar({
 					) : null}
 				</div>
 
+				<ShotsCounter />
+
 				<button
 					type="button"
 					onClick={onSave}
@@ -109,5 +107,31 @@ export function TopToolbar({
 				)}
 			</button>
 		</div>
+	);
+}
+
+function ShotsCounter() {
+	const { data, isLoading } = useShotsRemaining();
+
+	if (isLoading || !data) return null;
+
+	if (data.shots_remaining === null) return null;
+
+	if (data.shots_remaining === 0) {
+		return (
+			<a
+				href="/dashboard/settings/billing"
+				className="text-[10px] font-mono text-blue-500 hover:text-blue-600 underline whitespace-nowrap"
+			>
+				Upgrade to PRO for unlimited shots →
+			</a>
+		);
+	}
+
+	return (
+		<span className="text-[10px] font-mono text-foreground/40 whitespace-nowrap">
+			{data.shots_remaining} shot
+			{data.shots_remaining === 1 ? "" : "s"} left this month
+		</span>
 	);
 }
