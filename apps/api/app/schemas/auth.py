@@ -67,3 +67,7 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str = Field(min_length=project.password.min_length, max_length=project.password.max_length)
+
+
+class TotpCodeRequest(BaseModel):
+    code: str
