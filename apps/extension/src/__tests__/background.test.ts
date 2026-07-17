@@ -701,7 +701,8 @@ describe("background message handlers", () => {
 					const data = response.data as Record<string, unknown>;
 					expect(data.tailored_resume_id).toBe("tr_123");
 					expect(
-						(data.auto_fill_fields as Record<string, string>).summary,
+						(data.auto_fill_fields as Record<string, string>)
+							.summary,
 					).toBe("Experienced engineer");
 				}
 			});
@@ -731,7 +732,9 @@ describe("background message handlers", () => {
 								json: () =>
 									Promise.resolve({
 										tailored_resume_id: "tr_123",
-										auto_fill_fields: { summary: "Engineer" },
+										auto_fill_fields: {
+											summary: "Engineer",
+										},
 									}),
 							});
 						}
@@ -784,8 +787,7 @@ describe("background message handlers", () => {
 								ok: false,
 								json: () =>
 									Promise.resolve({
-										detail:
-											"Your plan allows 3 shots per month. Upgrade to PRO for unlimited shots.",
+										detail: "Your plan allows 3 shots per month. Upgrade to PRO for unlimited shots.",
 									}),
 							});
 						}

@@ -32,6 +32,8 @@ React 19 Chrome extension built with WXT, part of the resumio monorepo.
 | LOGOUT | → SW | Clear tokens |
 | REFRESH | → SW | Silent token refresh |
 | API_REQUEST | → SW | Generic API call (needs auth) |
+| SHOOT_JOB | → SW | Tailor resume for a job (JD text, source URL) |
+| OPEN_POPUP | → SW | Open extension popup (with fallback URL) |
 
 ### Token refresh
 - On mount: popup/options send REFRESH before GET_ME

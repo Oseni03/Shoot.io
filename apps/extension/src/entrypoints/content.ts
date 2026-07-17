@@ -1,45 +1,84 @@
 import { defineContentScript } from "wxt/utils/define-content-script";
 import type { PopupResponse } from "../types";
 
-const SELECTORS = {
-	applyButton: '[data-testid="apply-button"]',
-	jobDescription: '[class*="jobsearch-JobComponent-description"]',
-	descriptionFallback: '[class*="jobsearch-JobInfoHeader"]',
-	formInputs: "input, select, textarea",
+const FRONTEND_URL =
+	(import.meta.env.VITE_FRONTEND_URL as string | undefined) ??
+	"http://localhost:3000";
+
+const MODAL_SELECTORS = [
+	'[data-testid*="modal"]',
+	'[data-testid*="apply"]',
+	'[class*="apply-modal"]',
+	'[class*="apply--modal"]',
+	'[role="dialog"]',
+	"#indeedApplyModal",
+];
+
+const ACTION_BUTTON_PATTERNS = [
+	"continue",
+	"submit",
+	"next",
+	"apply now",
+	"send",
+];
+
+const JD_SELECTORS = [
+	"#jobDescriptionText",
+	'[class*="jobsearch-JobComponent-description"]',
+	'[data-testid*="job-description"]',
+	'[class*="jobsearch-JobInfoHeader"]',
+];
+
+const FIELD_MAPPINGS: Record<string, string[]> = {
+	name: ["name", "full_name", "fullname", "applicant.name"],
+	email: ["email", "e-mail"],
+	phone: ["phone", "telephone", "mobile", "phone_number", "applicant.phone"],
+	headline: ["headline", "title", "professional_title"],
+	summary: [
+		"summary",
+		"cover_letter",
+		"coverletter",
+		"why",
+		"interest",
+		"message",
+		"additional_info",
+	],
 };
 
 let shootInProgress = false;
 
-function waitForElement(
-	selector: string,
-	timeoutMs = 5000,
-): Promise<Element | null> {
-	return new Promise((resolve) => {
+function findModal(): Element | null {
+	for (const selector of MODAL_SELECTORS) {
 		const el = document.querySelector(selector);
-		if (el) {
-			resolve(el);
-			return;
+		if (el) return el;
+	}
+	return null;
+}
+
+function findActionButton(modal: Element): Element | null {
+	const buttons = modal.querySelectorAll("button");
+	for (const button of buttons) {
+		const text = button.textContent?.toLowerCase().trim() ?? "";
+		if (ACTION_BUTTON_PATTERNS.some((p) => text.includes(p))) {
+			return button;
 		}
-		const observer = new MutationObserver(() => {
-			const found = document.querySelector(selector);
-			if (found) {
-				observer.disconnect();
-				resolve(found);
-			}
-		});
-		observer.observe(document.body, { childList: true, subtree: true });
-		setTimeout(() => {
-			observer.disconnect();
-			resolve(null);
-		}, timeoutMs);
-	});
+	}
+	return null;
 }
 
 function scrapeJobDescription(): string | null {
-	const desc = document.querySelector(SELECTORS.jobDescription);
-	if (desc) return desc.textContent?.trim() ?? null;
-	const fallback = document.querySelector(SELECTORS.descriptionFallback);
-	return fallback?.textContent?.trim() ?? null;
+	const modal = findModal();
+	if (modal) {
+		for (const selector of JD_SELECTORS) {
+			const el = modal.querySelector(selector);
+			if (el?.textContent?.trim()) return el.textContent.trim();
+		}
+	}
+	for (const selector of JD_SELECTORS) {
+		const el = document.querySelector(selector);
+		if (el?.textContent?.trim()) return el.textContent.trim();
+	}
+	return null;
 }
 
 function getSourceUrl(): string {
@@ -60,22 +99,56 @@ function getCompany(): string | undefined {
 	return companyEl?.textContent?.trim() ?? undefined;
 }
 
-function fillFormField(fieldName: string, value: string): void {
-	const inputs = document.querySelectorAll(SELECTORS.formInputs);
+function fillFormField(
+	modal: Element,
+	fieldName: string,
+	value: string,
+): boolean {
+	const knownLabels = FIELD_MAPPINGS[fieldName] ?? [
+		fieldName.replace(/_/g, " "),
+		fieldName,
+	];
+
+	const inputs = modal.querySelectorAll(
+		'input:not([type="file"]):not([type="hidden"]), select, textarea',
+	);
+	let matched = false;
+
 	for (const input of inputs) {
 		const el = input as
 			| HTMLInputElement
 			| HTMLSelectElement
 			| HTMLTextAreaElement;
+
+		if (el instanceof HTMLInputElement && el.type === "file") continue;
+
 		const name = el.name?.toLowerCase() ?? "";
 		const id = el.id?.toLowerCase() ?? "";
 		const ariaLabel = el.getAttribute("aria-label")?.toLowerCase() ?? "";
 		const placeholder = el.getAttribute("placeholder")?.toLowerCase() ?? "";
 
-		const matches = [name, id, ariaLabel, placeholder].some(
-			(label) => label.includes(fieldName) || fieldName.includes(label),
+		let labelText = "";
+		if (el.id) {
+			const label = modal.querySelector(`label[for="${el.id}"]`);
+			if (label) labelText = label.textContent?.toLowerCase() ?? "";
+		}
+		if (!labelText) {
+			const parentLabel = el.closest("label");
+			if (parentLabel)
+				labelText = parentLabel.textContent?.toLowerCase() ?? "";
+		}
+
+		const matchFound = knownLabels.some(
+			(label) =>
+				name.includes(label) ||
+				id.includes(label) ||
+				ariaLabel.includes(label) ||
+				placeholder.includes(label) ||
+				labelText.includes(label) ||
+				label.includes(name),
 		);
-		if (!matches) continue;
+
+		if (!matchFound) continue;
 
 		const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
 			window.HTMLInputElement.prototype,
@@ -84,33 +157,50 @@ function fillFormField(fieldName: string, value: string): void {
 		if (nativeInputValueSetter && el instanceof HTMLInputElement) {
 			nativeInputValueSetter.call(el, value);
 		} else {
-			(el as HTMLInputElement).value = value;
+			el.value = value;
 		}
 		el.dispatchEvent(new Event("input", { bubbles: true }));
 		el.dispatchEvent(new Event("change", { bubbles: true }));
+		matched = true;
 	}
+
+	return matched;
 }
 
-function autoFillForm(fields: Record<string, string>): {
-	filled: number;
-	total: number;
-} {
+function autoFillForm(
+	modal: Element,
+	fields: Record<string, string>,
+): { filled: number; total: number } {
+	let filled = 0;
+	const total = Object.keys(fields).length;
+
 	for (const [fieldName, value] of Object.entries(fields)) {
-		fillFormField(fieldName, value);
+		if (fillFormField(modal, fieldName, value)) {
+			filled++;
+		}
 	}
-	return {
-		filled: Object.keys(fields).length,
-		total: Object.keys(fields).length,
-	};
+
+	return { filled, total };
 }
 
-function showToast(message: string, type: "loading" | "success" | "error"): void {
+function showToast(
+	message: string,
+	type: "loading" | "success" | "error",
+): void {
 	const existing = document.querySelector("#shoot-toast");
 	if (existing) existing.remove();
 
 	const toast = document.createElement("div");
 	toast.id = "shoot-toast";
 	toast.textContent = message;
+
+	const bgColor =
+		type === "error"
+			? "#dc2626"
+			: type === "loading"
+				? "#2563eb"
+				: "#16a34a";
+
 	Object.assign(toast.style, {
 		position: "fixed",
 		bottom: "24px",
@@ -121,15 +211,11 @@ function showToast(message: string, type: "loading" | "success" | "error"): void
 		fontWeight: "500",
 		zIndex: "99999",
 		color: "#fff",
-		backgroundColor:
-			type === "error"
-				? "#dc2626"
-				: type === "loading"
-					? "#2563eb"
-					: "#16a34a",
+		backgroundColor: bgColor,
 		boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
 		transition: "opacity 0.3s",
 	});
+
 	document.body.appendChild(toast);
 
 	if (type !== "loading") {
@@ -140,21 +226,38 @@ function showToast(message: string, type: "loading" | "success" | "error"): void
 	}
 }
 
+async function handleOpenPopup(): Promise<void> {
+	let opened = false;
+
+	const popupPromise = chrome.runtime
+		.sendMessage({ type: "OPEN_POPUP" })
+		.then((response: unknown) => {
+			opened = (response as PopupResponse)?.success === true;
+		})
+		.catch(() => {});
+
+	await Promise.race([
+		popupPromise,
+		new Promise<void>((resolve) => setTimeout(resolve, 300)),
+	]);
+
+	if (!opened) {
+		window.open(`${FRONTEND_URL}/auth/login`, "_blank");
+	}
+}
+
 async function handleShoot(shootButton: HTMLButtonElement): Promise<void> {
 	if (shootInProgress) return;
 
 	const jdText = scrapeJobDescription();
 	if (!jdText) {
-		showToast(
-			"Could not read job description. Try refreshing the page.",
-			"error",
-		);
+		showToast("Could not read job description. Try refreshing.", "error");
 		return;
 	}
 
 	shootInProgress = true;
 	shootButton.disabled = true;
-	shootButton.textContent = "Shooting...";
+	shootButton.innerHTML = '<span class="shoot-spinner"></span> Tailoring...';
 	showToast("Tailoring your resume...", "loading");
 
 	try {
@@ -173,7 +276,7 @@ async function handleShoot(shootButton: HTMLButtonElement): Promise<void> {
 		if (!result.success) {
 			if (result.code === "UNAUTHORIZED") {
 				showToast("Please sign in to use Shoot.", "error");
-				chrome.runtime.sendMessage({ type: "OPEN_POPUP" });
+				await handleOpenPopup();
 			} else {
 				showToast(result.error ?? "Shoot failed. Try again.", "error");
 			}
@@ -184,17 +287,27 @@ async function handleShoot(shootButton: HTMLButtonElement): Promise<void> {
 			auto_fill_fields: Record<string, string>;
 		};
 		const autoFillFields = data.auto_fill_fields;
-		const fieldCount = Object.keys(autoFillFields).length;
 
-		autoFillForm(autoFillFields);
+		const modal = findModal();
+		if (!modal) {
+			showToast("Resume tailored!", "success");
+			return;
+		}
 
-		if (fieldCount === 0) {
+		const { filled, total } = autoFillForm(modal, autoFillFields);
+
+		if (filled === 0 && total > 0) {
 			showToast(
-				"Resume tailored! Auto-fill couldn't find matching fields.",
+				"Resume tailored! Auto-fill couldn't find fields to fill.",
+				"success",
+			);
+		} else if (filled < total) {
+			showToast(
+				"Resume tailored! Some fields couldn't be auto-filled.",
 				"success",
 			);
 		} else {
-			showToast("Resume tailored and form filled!", "success");
+			showToast("Resume tailored! Review and submit.", "success");
 		}
 	} catch (err: unknown) {
 		const msg =
@@ -209,9 +322,17 @@ async function handleShoot(shootButton: HTMLButtonElement): Promise<void> {
 	}
 }
 
-function injectShootButton(applyButton: Element): void {
-	const parent = applyButton.parentElement;
-	if (!parent || parent.querySelector("#shoot-button")) return;
+function injectShootButton(
+	modal: Element,
+	hasResume: boolean,
+): HTMLButtonElement | null {
+	if (modal.querySelector("#shoot-button")) return null;
+
+	const actionButton = findActionButton(modal);
+	if (!actionButton) return null;
+
+	const parent = actionButton.parentElement;
+	if (!parent) return null;
 
 	const button = document.createElement("button");
 	button.id = "shoot-button";
@@ -220,34 +341,133 @@ function injectShootButton(applyButton: Element): void {
 		padding: "8px 16px",
 		borderRadius: "6px",
 		border: "none",
-		backgroundColor: "#2563eb",
+		backgroundColor: "#2557a7",
 		color: "#fff",
 		fontSize: "14px",
-		fontWeight: "600",
+		fontWeight: "700",
 		cursor: "pointer",
 		marginLeft: "8px",
+		lineHeight: "20px",
 	});
+
+	if (!hasResume) {
+		button.disabled = true;
+		button.title = "Set up your master resume first";
+		Object.assign(button.style, {
+			opacity: "0.5",
+			cursor: "not-allowed",
+		});
+	}
 
 	button.addEventListener("click", () => handleShoot(button));
 
-	parent.appendChild(button);
+	if (actionButton.nextSibling) {
+		parent.insertBefore(button, actionButton.nextSibling);
+	} else {
+		parent.appendChild(button);
+	}
+
+	return button;
+}
+
+function updateShootButtons(hasResume: boolean): void {
+	const buttons = document.querySelectorAll(
+		"#shoot-button",
+	) as NodeListOf<HTMLButtonElement>;
+	for (const btn of buttons) {
+		if (hasResume) {
+			btn.disabled = false;
+			btn.title = "";
+			btn.style.opacity = "1";
+			btn.style.cursor = "pointer";
+		} else {
+			btn.disabled = true;
+			btn.title = "Set up your master resume first";
+			btn.style.opacity = "0.5";
+			btn.style.cursor = "not-allowed";
+		}
+	}
+}
+
+function hasMasterFromResponse(data: unknown): boolean {
+	const resumes = data as Array<{ is_master: boolean }> | null;
+	return Array.isArray(resumes) && resumes.some((r) => r.is_master);
+}
+
+async function checkHasMasterResume(): Promise<boolean> {
+	const response = await chrome.runtime.sendMessage({
+		type: "API_REQUEST",
+		payload: { path: "/resumes" },
+	});
+
+	const result = response as PopupResponse;
+
+	if (result.success) {
+		return hasMasterFromResponse(result.data);
+	}
+
+	if (!result.success && result.code === "UNAUTHORIZED") {
+		const refreshResponse = await chrome.runtime.sendMessage({
+			type: "REFRESH",
+		});
+
+		if ((refreshResponse as PopupResponse).success) {
+			const retryResponse = await chrome.runtime.sendMessage({
+				type: "API_REQUEST",
+				payload: { path: "/resumes" },
+			});
+
+			if ((retryResponse as PopupResponse).success) {
+				return hasMasterFromResponse(
+					(retryResponse as PopupResponse).data,
+				);
+			}
+		}
+	}
+
+	return false;
 }
 
 function main(): void {
-	waitForElement(SELECTORS.applyButton, 10000).then((applyButton) => {
-		if (applyButton) injectShootButton(applyButton);
+	const style = document.createElement("style");
+	style.textContent = `
+    @keyframes shoot-spin { to { transform: rotate(360deg); } }
+    .shoot-spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: shoot-spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+  `;
+	document.head.appendChild(style);
+
+	let hasMasterResume: boolean | null = null;
+
+	checkHasMasterResume().then((result) => {
+		hasMasterResume = result;
+		updateShootButtons(result);
 	});
 
+	const initialModal = findModal();
+	if (initialModal) {
+		injectShootButton(initialModal, true);
+	}
+
 	const observer = new MutationObserver(() => {
-		const applyButton = document.querySelector(SELECTORS.applyButton);
-		if (
-			applyButton &&
-			!applyButton.parentElement?.querySelector("#shoot-button")
-		) {
-			injectShootButton(applyButton);
+		const m = findModal();
+		if (m && !m.querySelector("#shoot-button")) {
+			injectShootButton(m, hasMasterResume ?? true);
 		}
 	});
 	observer.observe(document.body, { childList: true, subtree: true });
+
+	setTimeout(() => {
+		/* standby — observer still active, initial scan phase over */
+	}, 5000);
 }
 
 export default defineContentScript({

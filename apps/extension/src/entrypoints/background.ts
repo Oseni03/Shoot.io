@@ -209,6 +209,19 @@ async function handleMessage(
 				break;
 			}
 
+			case "OPEN_POPUP": {
+				try {
+					await chrome.action.openPopup();
+					sendResponse({ success: true, data: null });
+				} catch {
+					sendResponse({
+						success: false,
+						error: "Failed to open popup",
+					});
+				}
+				break;
+			}
+
 			case "SHOOT_JOB": {
 				const { jobDescriptionText, sourceUrl, jobTitle, company } =
 					message.payload;

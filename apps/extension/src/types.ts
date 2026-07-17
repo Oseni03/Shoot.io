@@ -29,7 +29,8 @@ export type PopupMessage =
 				jobTitle?: string;
 				company?: string;
 			};
-	  };
+	  }
+	| { type: "OPEN_POPUP" };
 
 export type PopupResponse =
 	| { success: true; data: TokenPair & { user?: UserResponse } }
