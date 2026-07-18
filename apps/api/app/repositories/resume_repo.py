@@ -1,6 +1,7 @@
 """Resume repository — DB access for Resume, TailoredResume, JobDescription, UserMonthlyUsage."""
 
 from datetime import date
+from typing import Any
 
 from sqlalchemy import delete as sa_delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,6 +93,9 @@ class ResumeRepository:
             await self.db.execute(
                 sa_delete(model).where(model.resume_id == resume_id)
             )
+
+    async def delete_section(self, resume_id: str, model: type[Any]) -> None:
+        await self.db.execute(sa_delete(model).where(model.resume_id == resume_id))
 
     # ── JobDescription ────────────────────────────────────────────────
 

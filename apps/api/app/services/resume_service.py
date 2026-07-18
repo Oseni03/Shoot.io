@@ -1,7 +1,5 @@
 """Resume service — CRUD for resumes with master invariant enforcement."""
 
-from typing import Any
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestError, NotFoundError
@@ -17,16 +15,7 @@ from app.models.resume import (
     ResumeSummary,
 )
 from app.repositories.resume_repo import ResumeRepository
-from app.schemas.resume import (
-    CertificationRequest,
-    EducationRequest,
-    ExperienceRequest,
-    ProjectRequest,
-    ResumeCreateRequest,
-    ResumeUpdateRequest,
-    SkillRequest,
-    SummaryRequest,
-)
+from app.schemas.resume import ResumeCreateRequest, ResumeUpdateRequest
 
 
 class ResumeService:
@@ -74,9 +63,28 @@ class ResumeService:
         if payload.title is not None:
             resume.title = payload.title
 
-        if payload.experiences is not None:
-            await self.repo.delete_sections(resume_id)
-            await self._create_sections(resume_id, payload)
+        fields_set = payload.model_fields_set
+        section_models: dict[str, type] = {
+            "experiences": ResumeExperience,
+            "educations": ResumeEducation,
+            "skills": ResumeSkill,
+            "summary": ResumeSummary,
+            "projects": ResumeProject,
+            "certifications": ResumeCertification,
+        }
+
+        for field_name, model_cls in section_models.items():
+            if field_name not in fields_set:
+                continue
+            value = getattr(payload, field_name)
+            await self.repo.delete_section(resume_id, model_cls)
+            if value is None:
+                continue
+            if field_name == "summary":
+                self.db.add(ResumeSummary(id=new_ulid(), resume_id=resume_id, **value.model_dump()))
+            else:
+                for item in value:
+                    self.db.add(model_cls(id=new_ulid(), resume_id=resume_id, **item.model_dump()))
 
         await self.repo.save(resume)
 

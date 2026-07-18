@@ -13,7 +13,16 @@ from app.models.organization import PlanTier
 from app.models.resume import Resume
 from app.models.user import User
 from app.repositories.resume_repo import ResumeRepository
-from app.schemas.resume import ResumeCreateRequest, ExperienceRequest, SkillRequest, SummaryRequest
+from app.schemas.resume import (
+    ResumeCreateRequest,
+    ResumeUpdateRequest,
+    ExperienceRequest,
+    EducationRequest,
+    SkillRequest,
+    SummaryRequest,
+    ProjectRequest,
+    CertificationRequest,
+)
 from app.services.resume_service import ResumeService
 from app.services.shot_service import ShotService
 from app.services.tailoring_service import TailoringService
@@ -98,6 +107,155 @@ async def test_create_with_sections(db_session: AsyncSession) -> None:
     assert resume.skills[0].name == "Python"
     assert resume.summary is not None
     assert resume.summary.content == "Engineer."
+
+
+@pytest.mark.asyncio
+async def test_update_only_summary_leaves_other_sections_untouched(db_session: AsyncSession) -> None:
+    user = User(id=new_ulid(), email="partial@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    payload = ResumeCreateRequest(
+        title="Original",
+        is_master=True,
+        experiences=[ExperienceRequest(company="Acme", title="Engineer", bullets=["Built X"])],
+        educations=[EducationRequest(school="MIT", degree="BS")],
+        skills=[SkillRequest(name="Python")],
+        summary=SummaryRequest(content="Original summary."),
+        projects=[ProjectRequest(name="Project A")],
+        certifications=[CertificationRequest(name="AWS")],
+    )
+    svc = ResumeService(db_session)
+    resume = await svc.create(user.id, payload)
+    resume_id = resume.id
+
+    updated = await svc.update(
+        resume_id,
+        user.id,
+        ResumeUpdateRequest(summary=SummaryRequest(content="New summary.")),
+    )
+
+    assert updated.summary is not None
+    assert updated.summary.content == "New summary."
+    assert len(updated.experiences) == 1
+    assert updated.experiences[0].company == "Acme"
+    assert len(updated.educations) == 1
+    assert updated.educations[0].school == "MIT"
+    assert len(updated.skills) == 1
+    assert updated.skills[0].name == "Python"
+    assert len(updated.projects) == 1
+    assert updated.projects[0].name == "Project A"
+    assert len(updated.certifications) == 1
+    assert updated.certifications[0].name == "AWS"
+
+
+@pytest.mark.asyncio
+async def test_update_only_experiences_replaces_it_leaves_others(db_session: AsyncSession) -> None:
+    user = User(id=new_ulid(), email="partial2@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    payload = ResumeCreateRequest(
+        title="Original",
+        is_master=True,
+        experiences=[ExperienceRequest(company="Acme", title="Engineer")],
+        educations=[EducationRequest(school="MIT", degree="BS")],
+        skills=[SkillRequest(name="Python")],
+        summary=SummaryRequest(content="Original summary."),
+    )
+    svc = ResumeService(db_session)
+    resume = await svc.create(user.id, payload)
+    resume_id = resume.id
+
+    updated = await svc.update(
+        resume_id,
+        user.id,
+        ResumeUpdateRequest(
+            experiences=[ExperienceRequest(company="Newco", title="Senior")]
+        ),
+    )
+
+    assert len(updated.experiences) == 1
+    assert updated.experiences[0].company == "Newco"
+    assert len(updated.educations) == 1
+    assert updated.educations[0].school == "MIT"
+    assert len(updated.skills) == 1
+    assert updated.skills[0].name == "Python"
+    assert updated.summary is not None
+    assert updated.summary.content == "Original summary."
+
+
+@pytest.mark.asyncio
+async def test_update_explicit_empty_list_clears_that_section(db_session: AsyncSession) -> None:
+    user = User(id=new_ulid(), email="partial3@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    payload = ResumeCreateRequest(
+        title="Original",
+        is_master=True,
+        experiences=[ExperienceRequest(company="Acme", title="Engineer")],
+        skills=[SkillRequest(name="Python")],
+    )
+    svc = ResumeService(db_session)
+    resume = await svc.create(user.id, payload)
+    resume_id = resume.id
+
+    updated = await svc.update(
+        resume_id,
+        user.id,
+        ResumeUpdateRequest(experiences=[]),
+    )
+
+    assert len(updated.experiences) == 0
+    assert len(updated.skills) == 1
+    assert updated.skills[0].name == "Python"
+
+
+@pytest.mark.asyncio
+async def test_update_full_payload_replaces_everything(db_session: AsyncSession) -> None:
+    user = User(id=new_ulid(), email="fullreplace@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    payload = ResumeCreateRequest(
+        title="Original",
+        is_master=True,
+        experiences=[ExperienceRequest(company="Acme", title="Engineer")],
+        skills=[SkillRequest(name="Python")],
+        summary=SummaryRequest(content="Old summary."),
+    )
+    svc = ResumeService(db_session)
+    resume = await svc.create(user.id, payload)
+    resume_id = resume.id
+
+    updated = await svc.update(
+        resume_id,
+        user.id,
+        ResumeUpdateRequest(
+            title="Updated",
+            experiences=[ExperienceRequest(company="Newco", title="Senior")],
+            educations=[EducationRequest(school="Harvard")],
+            skills=[SkillRequest(name="Rust")],
+            summary=SummaryRequest(content="New summary."),
+            projects=[ProjectRequest(name="New Project")],
+            certifications=[CertificationRequest(name="GCP")],
+        ),
+    )
+
+    assert updated.title == "Updated"
+    assert len(updated.experiences) == 1
+    assert updated.experiences[0].company == "Newco"
+    assert len(updated.educations) == 1
+    assert updated.educations[0].school == "Harvard"
+    assert len(updated.skills) == 1
+    assert updated.skills[0].name == "Rust"
+    assert updated.summary is not None
+    assert updated.summary.content == "New summary."
+    assert len(updated.projects) == 1
+    assert updated.projects[0].name == "New Project"
+    assert len(updated.certifications) == 1
+    assert updated.certifications[0].name == "GCP"
 
 
 @pytest.mark.asyncio

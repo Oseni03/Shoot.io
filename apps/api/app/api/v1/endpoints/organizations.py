@@ -1,9 +1,9 @@
 from fastapi import APIRouter, BackgroundTasks, status
 
-from app.api.deps import CurrentUser, DBDep, VerifiedUser
+from app.api.deps import CurrentOrg, CurrentUser, DBDep, VerifiedUser, require_org_role
 from app.core.exceptions import NotFoundError
 from app.lib.email import send_invitation_email
-from app.models.membership import MemberRole
+from app.models.membership import MemberRole, Membership
 from app.repositories.org_repo import OrganizationRepository
 from app.schemas.organization import (
     AcceptInvitationRequest,
@@ -35,10 +35,10 @@ async def list_orgs(current_user: CurrentUser, db: DBDep) -> list[OrgResponse]:
 
 
 @router.get("/{org_id}", response_model=OrgResponse)
-async def get_org(org_id: str, current_user: CurrentUser, db: DBDep) -> OrgResponse:
-    org = await OrganizationRepository(db).get_by_id(org_id)
-    if not org:
-        raise NotFoundError("Organization")
+async def get_org(
+    org: CurrentOrg,
+    _membership: Membership = require_org_role(MemberRole.VIEWER),
+) -> OrgResponse:
     return OrgResponse.model_validate(org)
 
 

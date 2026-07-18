@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Header, Query, Request, status
 
-from app.api.deps import CurrentUser, DBDep
-from app.core.exceptions import NotFoundError
-from app.repositories.org_repo import OrganizationRepository
+from app.api.deps import CurrentOrg, CurrentUser, DBDep, require_org_role
+from app.models.membership import MemberRole, Membership
 from app.schemas.organization import BillingInitSchema, BillingVerifyResponse
 from app.services.billing_service import BillingService
 
@@ -11,19 +10,16 @@ router = APIRouter(prefix="/billing", tags=["billing"])
 
 @router.post("/organizations/{org_id}/initialize")
 async def initialize_transaction(
-    org_id: str,
+    org: CurrentOrg,
     payload: BillingInitSchema,
     current_user: CurrentUser,
     db: DBDep,
+    _membership: Membership = require_org_role(MemberRole.ADMIN),
 ) -> dict:
     """
     Step 1 — Initialize a Paystack transaction.
     Returns { authorization_url } — redirect the user there to pay.
     """
-    org = await OrganizationRepository(db).get_by_id(org_id)
-    if not org:
-        raise NotFoundError("Organization")
-
     url = await BillingService(db).initialize_transaction(
         org=org,
         plan=payload.plan,
@@ -49,28 +45,22 @@ async def verify_transaction(
 
 @router.get("/organizations/{org_id}/manage")
 async def get_manage_url(
-    org_id: str,
-    current_user: CurrentUser,
+    org: CurrentOrg,
     db: DBDep,
+    _membership: Membership = require_org_role(MemberRole.ADMIN),
 ) -> dict:
     """Returns a URL to your own billing management page."""
-    org = await OrganizationRepository(db).get_by_id(org_id)
-    if not org:
-        raise NotFoundError("Organization")
     url = await BillingService(db).get_manage_url(org)
     return {"manage_url": url}
 
 
 @router.post("/organizations/{org_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
 async def cancel_subscription(
-    org_id: str,
-    current_user: CurrentUser,
+    org: CurrentOrg,
     db: DBDep,
+    _membership: Membership = require_org_role(MemberRole.ADMIN),
 ) -> None:
     """Cancel the org's active subscription via Paystack API."""
-    org = await OrganizationRepository(db).get_by_id(org_id)
-    if not org:
-        raise NotFoundError("Organization")
     await BillingService(db).cancel_subscription(org)
 
 

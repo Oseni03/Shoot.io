@@ -62,3 +62,91 @@ async def test_accept_invalid_invitation(client: AsyncClient) -> None:
         headers=auth_header(token),
     )
     assert res.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_get_org_non_member_forbidden(client: AsyncClient, db_session) -> None:
+    from app.core.security import create_access_token
+    from app.lib.ulid import new_ulid
+    from app.models.membership import MemberRole, Membership
+    from app.models.organization import Organization
+    from app.models.user import User
+
+    owner = User(
+        id=new_ulid(),
+        email="org-owner@example.com",
+        hashed_password="hashed_placeholder",
+        is_verified=True,
+        is_active=True,
+    )
+    org = Organization(id=new_ulid(), name="Private Org", slug="private-org")
+    db_session.add_all([owner, org])
+    await db_session.flush()
+    db_session.add(
+        Membership(id=new_ulid(), user_id=owner.id, organization_id=org.id, role=MemberRole.OWNER)
+    )
+    await db_session.flush()
+
+    outsider = User(
+        id=new_ulid(),
+        email="org-outsider@example.com",
+        hashed_password="hashed_placeholder",
+        is_verified=True,
+        is_active=True,
+    )
+    db_session.add(outsider)
+    await db_session.flush()
+    outsider_headers = auth_header(create_access_token(outsider.id))
+
+    res = await client.get(f"/api/v1/organizations/{org.id}", headers=outsider_headers)
+    assert res.status_code in (403, 404)
+
+
+@pytest.mark.asyncio
+async def test_get_org_member_succeeds(client: AsyncClient, db_session) -> None:
+    from app.core.security import create_access_token
+    from app.lib.ulid import new_ulid
+    from app.models.membership import MemberRole, Membership
+    from app.models.organization import Organization
+    from app.models.user import User
+
+    member = User(
+        id=new_ulid(),
+        email="org-member@example.com",
+        hashed_password="hashed_placeholder",
+        is_verified=True,
+        is_active=True,
+    )
+    org = Organization(id=new_ulid(), name="Member Org", slug="member-org")
+    db_session.add_all([member, org])
+    await db_session.flush()
+    db_session.add(
+        Membership(id=new_ulid(), user_id=member.id, organization_id=org.id, role=MemberRole.VIEWER)
+    )
+    await db_session.flush()
+    headers = auth_header(create_access_token(member.id))
+
+    res = await client.get(f"/api/v1/organizations/{org.id}", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["id"] == org.id
+
+
+@pytest.mark.asyncio
+async def test_get_org_unknown_id_returns_404(client: AsyncClient, db_session) -> None:
+    from app.core.security import create_access_token
+    from app.lib.ulid import new_ulid
+    from app.models.user import User
+
+    user = User(
+        id=new_ulid(),
+        email="unknown-org@example.com",
+        hashed_password="hashed_placeholder",
+        is_verified=True,
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    headers = auth_header(create_access_token(user.id))
+
+    res = await client.get("/api/v1/organizations/nonexistent", headers=headers)
+    assert res.status_code == 404
