@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { HttpClient } from "shared";
-import { ENV, PROJECT, ROUTES, STORAGE_KEYS } from "@/lib/config";
+import { API_ENDPOINTS, ENV, PROJECT, ROUTES, STORAGE_KEYS } from "@/lib/config";
 
 export const tokenStore = {
 	getAccess: (): string | null => {
@@ -17,14 +17,14 @@ export const tokenStore = {
 		if (typeof window === "undefined") return;
 		localStorage.setItem(STORAGE_KEYS.accessToken, access);
 		localStorage.setItem(STORAGE_KEYS.refreshToken, refresh);
-		document.cookie = `${STORAGE_KEYS.accessToken}=${access}; path=/; SameSite=Strict; max-age=604800`;
+		document.cookie = `${STORAGE_KEYS.loggedIn}=true; path=/; SameSite=Strict; max-age=604800`;
 	},
 
 	clear: (): void => {
 		if (typeof window === "undefined") return;
 		localStorage.removeItem(STORAGE_KEYS.accessToken);
 		localStorage.removeItem(STORAGE_KEYS.refreshToken);
-		document.cookie = `${STORAGE_KEYS.accessToken}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict`;
+		document.cookie = `${STORAGE_KEYS.loggedIn}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict`;
 	},
 };
 
@@ -48,18 +48,98 @@ api.interceptors.request.use(
 	},
 );
 
+interface QueueItem {
+	resolve: (token: string) => void;
+	reject: (error: unknown) => void;
+}
+
+let isRefreshing = false;
+let failedQueue: QueueItem[] = [];
+
+function processQueue(error: unknown, token: string | null = null) {
+	failedQueue.forEach(({ resolve, reject }) => {
+		if (error) {
+			reject(error);
+		} else {
+			resolve(token!);
+		}
+	});
+	failedQueue = [];
+}
+
+function redirectToLogin() {
+	if (typeof window !== "undefined") {
+		if (!ROUTES.publicPaths.includes(window.location.pathname)) {
+			window.location.href = ROUTES.login;
+		}
+	}
+}
+
 api.interceptors.response.use(
 	(response) => response,
 	async (error) => {
-		if (error.response?.status === 401) {
-			tokenStore.clear();
+		const originalRequest = error.config;
+		if (!originalRequest) return Promise.reject(error);
 
-			if (typeof window !== "undefined") {
-				if (!ROUTES.publicPaths.includes(window.location.pathname)) {
-					window.location.href = ROUTES.login;
+		if (error.response?.status === 401) {
+			const isRefreshRequest =
+				typeof originalRequest.url === "string" &&
+				originalRequest.url.includes(API_ENDPOINTS.auth.refresh);
+
+			if (isRefreshRequest || (originalRequest as Record<string, unknown>)._retry) {
+				tokenStore.clear();
+				redirectToLogin();
+				return Promise.reject(error);
+			}
+
+			const refreshToken = tokenStore.getRefresh();
+			if (!refreshToken) {
+				tokenStore.clear();
+				redirectToLogin();
+				return Promise.reject(error);
+			}
+
+			if (isRefreshing) {
+				return new Promise<string>((resolve, reject) => {
+					failedQueue.push({ resolve, reject });
+				}).then((token) => {
+					originalRequest.headers.Authorization = `${PROJECT.tokenType} ${token}`;
+					return api(originalRequest);
+				});
+			}
+
+			(originalRequest as Record<string, unknown>)._retry = true;
+			isRefreshing = true;
+
+			try {
+				const response = await api.post(API_ENDPOINTS.auth.refresh, {
+					refresh_token: refreshToken,
+				});
+				const data = response.data as Record<string, unknown>;
+				if (
+					typeof data.access_token !== "string" ||
+					typeof data.refresh_token !== "string"
+				) {
+					throw new Error("Invalid refresh response");
 				}
+				const { access_token, refresh_token } = data as {
+					access_token: string;
+					refresh_token: string;
+				};
+				tokenStore.set(access_token, refresh_token);
+				processQueue(null, access_token);
+				originalRequest.headers.Authorization = `${PROJECT.tokenType} ${access_token}`;
+				return api(originalRequest);
+			} catch (refreshError) {
+				processQueue(refreshError, null);
+				tokenStore.clear();
+				redirectToLogin();
+				return Promise.reject(refreshError);
+			} finally {
+				isRefreshing = false;
 			}
 		}
+
 		return Promise.reject(error);
 	},
 );

@@ -4,8 +4,8 @@ import { ROUTES, STORAGE_KEYS } from "@/lib/config";
 
 export function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
-	const token = request.cookies.get(STORAGE_KEYS.accessToken)?.value;
-	const isAuthenticated = !!token;
+	const loggedIn = request.cookies.get(STORAGE_KEYS.loggedIn)?.value;
+	const isAuthenticated = loggedIn === "true";
 
 	const isProtected = ROUTES.protectedPrefixes.some((prefix) =>
 		pathname.startsWith(prefix),

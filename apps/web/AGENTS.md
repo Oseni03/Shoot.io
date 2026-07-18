@@ -33,7 +33,7 @@ No test framework installed.
 
 ## API Contract
 
-`API.md` at project root documents every endpoint (request/response/errors). **Update API.md whenever API-related code changes** (schemas, api-services, auth service, or when endpoints change).
+`apps/web/API.md` documents every API endpoint (request/response/errors). **Update API.md whenever API-related code changes** (schemas, api-services, auth service, or when endpoints change).
 
 ## Architecture
 
@@ -56,8 +56,8 @@ All API responses go through `snakeCaseSchema()` (`src/lib/utils.ts:16`) — a `
 ## Auth (critical)
 
 - `src/middleware.ts` protects `/dashboard/`, `/onboarding`, `/invitations`; redirects authenticated users away from `/login`, `/signup`, `/forgot-password`, `/reset-password`
-- `access_token` in localStorage + cookie (for middleware). `refresh_token` in localStorage only. Cookie: sameSite=Strict, 7d max-age.
-- On 401, Axios interceptor clears tokens and redirects to `/login` (unless on public path). No auto-refresh in interceptor — use `authService.refreshIfNeeded()` proactively.
+- `access_token` in localStorage + boolean `logged_in` cookie (for middleware). `refresh_token` in localStorage only. Cookie: sameSite=Strict, 7d max-age.
+- On 401, Axios interceptor attempts one silent refresh-and-retry via `POST /auth/refresh`. If refresh succeeds, the original request is retried with the new token. If refresh fails (expired/invalid refresh token), tokens are cleared and the user is redirected to `/login`. Concurrent 401s during refresh are queued and retried once.
 - `useMe` query retries network errors (status=0) up to 2 times.
 - API base: `NEXT_PUBLIC_API_URL` (default `http://localhost:8000/api/v1`)
 

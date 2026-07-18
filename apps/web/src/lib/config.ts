@@ -125,6 +125,7 @@ export const API_ENDPOINTS = {
 
 export const STORAGE_KEYS = {
 	...SharedStorageKeys,
+	loggedIn: "index_logged_in",
 	themeMode: "index-theme-mode",
 	primaryColor: "index-primary-color",
 } as const;
