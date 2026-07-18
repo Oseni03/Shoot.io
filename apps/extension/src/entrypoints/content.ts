@@ -114,6 +114,11 @@ function fillFormField(
 	);
 	let matched = false;
 
+	const safeIncludes = (a: string, b: string): boolean => {
+		if (!a || !b) return false;
+		return a.includes(b);
+	};
+
 	for (const input of inputs) {
 		const el = input as
 			| HTMLInputElement
@@ -140,12 +145,12 @@ function fillFormField(
 
 		const matchFound = knownLabels.some(
 			(label) =>
-				name.includes(label) ||
-				id.includes(label) ||
-				ariaLabel.includes(label) ||
-				placeholder.includes(label) ||
-				labelText.includes(label) ||
-				label.includes(name),
+				safeIncludes(name, label) ||
+				safeIncludes(id, label) ||
+				safeIncludes(ariaLabel, label) ||
+				safeIncludes(placeholder, label) ||
+				safeIncludes(labelText, label) ||
+				safeIncludes(label, name),
 		);
 
 		if (!matchFound) continue;

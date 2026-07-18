@@ -418,6 +418,52 @@ describe("content script", () => {
 		);
 	});
 
+	it("does not autofill an unnamed/unlabeled input", async () => {
+		const modal = createModal("Continue", true);
+
+		const unnamedInput = createFormField("input", {
+			name: "",
+		}) as HTMLInputElement;
+		modal.appendChild(unnamedInput);
+
+		const nameInput = createFormField("input", {
+			name: "applicant.name",
+		}) as HTMLInputElement;
+		modal.appendChild(nameInput);
+
+		document.body.appendChild(modal);
+
+		getSendMessage()
+			.mockResolvedValueOnce({
+				success: true,
+				data: [{ id: "r1", is_master: true }],
+			})
+			.mockResolvedValueOnce({
+				success: true,
+				data: {
+					tailored_resume_id: "tr_123",
+					auto_fill_fields: {
+						name: "John Doe",
+						email: "j@test.com",
+						phone: "555-0100",
+					},
+				},
+			});
+
+		contentScript.main();
+		await flushMicrotasks();
+
+		const shootButton = document.querySelector(
+			"#shoot-button",
+		) as HTMLButtonElement;
+
+		shootButton.click();
+		await flushMicrotasks();
+
+		expect(nameInput.value).toBe("John Doe");
+		expect(unnamedInput.value).toBe("");
+	});
+
 	it("skips file inputs when filling form fields", async () => {
 		const modal = createModal("Continue", true);
 
