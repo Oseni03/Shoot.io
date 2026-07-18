@@ -10,7 +10,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import PaymentRequiredError
-from app.core.permissions import PlanLimits, assert_shot_available
+from app.core.permissions import SHOT_LIMIT_EXCEEDED, PlanLimits, assert_shot_available
 from app.lib.logger import logger
 from app.models.organization import PlanTier
 from app.repositories.resume_repo import ResumeRepository
@@ -39,10 +39,27 @@ class ShotService:
             return False
 
     async def assert_can_shoot(self, user_id: str, plan: PlanTier) -> None:
+        """Read-only check — does NOT increment. Prefer assert_and_record_shot."""
         used = await self.get_shots_used(user_id)
         assert_shot_available(plan, used)
 
+    async def assert_and_record_shot(self, user_id: str, plan: PlanTier) -> None:
+        """Atomically increment shot count and assert the user hasn't exceeded their plan limit.
+
+        This eliminates the race between check and increment.
+        """
+        period = self._current_period_start()
+        new_count = await self.repo.create_or_increment_usage(user_id, period)
+        limits = PlanLimits.for_plan(plan)
+        if limits.max_shots_per_month is not None and new_count > limits.max_shots_per_month:
+            raise PaymentRequiredError(
+                f"Your plan allows {limits.max_shots_per_month} shots per month. "
+                + SHOT_LIMIT_EXCEEDED
+            )
+        logger.info("shot.recorded", user_id=user_id, period=str(period))
+
     async def record_shot(self, user_id: str) -> None:
+        """Increment shot count without checking limits. Prefer assert_and_record_shot."""
         period = self._current_period_start()
         await self.repo.create_or_increment_usage(user_id, period)
         logger.info("shot.recorded", user_id=user_id, period=str(period))

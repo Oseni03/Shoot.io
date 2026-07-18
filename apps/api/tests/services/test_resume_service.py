@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.exceptions import BadRequestError, NotFoundError, PaymentRequiredError
 from app.core.permissions import PlanLimits, assert_shot_available
 from app.lib.ulid import new_ulid
 from app.models.organization import PlanTier
@@ -418,6 +418,65 @@ async def test_shot_remaining_period_end_is_last_day_of_month(db_session: AsyncS
     last_day = calendar.monthrange(now.year, now.month)[1]
     expected = f"{now.year:04d}-{now.month:02d}-{last_day:02d}"
     assert result["period_end"] == expected
+
+
+# ── Atomic upsert / concurrency ─────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_assert_and_record_shot_free_limit(db_session: AsyncSession) -> None:
+    user = User(id=new_ulid(), email="assert-record@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    svc = ShotService(db_session)
+
+    for _ in range(3):
+        await svc.assert_and_record_shot(user.id, PlanTier.FREE)
+
+    assert await svc.get_shots_used(user.id) == 3
+
+    with pytest.raises(PaymentRequiredError):
+        await svc.assert_and_record_shot(user.id, PlanTier.FREE)
+
+    assert await svc.get_shots_used(user.id) == 4
+
+
+@pytest.mark.asyncio
+async def test_assert_and_record_shot_pro_unlimited(db_session: AsyncSession) -> None:
+    user = User(id=new_ulid(), email="assert-record-pro@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    svc = ShotService(db_session)
+
+    for _ in range(100):
+        await svc.assert_and_record_shot(user.id, PlanTier.PRO)
+
+    assert await svc.get_shots_used(user.id) == 100
+
+
+@pytest.mark.asyncio
+async def test_create_or_increment_usage_no_integrity_error_on_race(db_session: AsyncSession) -> None:
+    """Two concurrent create_or_increment_usage calls never raise IntegrityError."""
+    import asyncio
+    from datetime import date
+
+    user = User(id=new_ulid(), email="race-insert@test.com", hashed_password="hash")
+    db_session.add(user)
+    await db_session.flush()
+
+    repo = ResumeRepository(db_session)
+    period = date(2026, 7, 1)
+
+    c1, c2 = await asyncio.gather(
+        repo.create_or_increment_usage(user.id, period),
+        repo.create_or_increment_usage(user.id, period),
+    )
+
+    results = sorted([c1, c2])
+    assert results == [1, 2]
+    assert await repo.get_shots_used_in_period(user.id, period) == 2
 
 
 # ── TailoringService ────────────────────────────────────────────────────────

@@ -107,10 +107,9 @@ async def shoot(
     """Tailor the master resume to a job description and return auto-fill fields.
 
     1. Get user's master resume (400 if none)
-    2. Check plan limits (402 if exceeded)
+    2. Atomically increment shot count and check plan limit (402 if exceeded)
     3. Call tailoring service to produce tailored resume (also creates JD + TailoredResume)
-    4. Record shot
-    5. Call auto-fill service to map fields
+    4. Call auto-fill service to map fields
     """
     resume_service = ResumeService(db)
     shot_service = ShotService(db)
@@ -119,7 +118,7 @@ async def shoot(
     master = await resume_service.get_master(current_user.id)
 
     plan = _resolve_plan(current_user)
-    await shot_service.assert_can_shoot(current_user.id, PlanTier(plan))
+    await shot_service.assert_and_record_shot(current_user.id, PlanTier(plan))
 
     tailoring_service = TailoringService(db)
     tailored = await tailoring_service.tailor(
@@ -130,8 +129,6 @@ async def shoot(
         jd_title=payload.job_title,
         jd_company=payload.company,
     )
-
-    await shot_service.record_shot(current_user.id)
 
     auto_fill_fields = autofill_service.map_fields(
         tailored.sections,

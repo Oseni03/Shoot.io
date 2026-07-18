@@ -1,5 +1,5 @@
 ---
-labels: ready-for-agent
+labels: implemented
 ---
 
 ## Parent

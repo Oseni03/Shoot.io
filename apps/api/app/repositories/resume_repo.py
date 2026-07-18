@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import delete as sa_delete, select, update
+from sqlalchemy import delete as sa_delete, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -132,23 +132,24 @@ class ResumeRepository:
         )
         return result.scalar_one_or_none()
 
-    async def create_or_increment_usage(self, user_id: str, period_start: date) -> UserMonthlyUsage:
-        existing = await self.get_usage(user_id, period_start)
-        if existing:
-            existing.shots_used += 1
-            await self.db.flush()
-            await self.db.refresh(existing)
-            return existing
-        usage = UserMonthlyUsage(
-            id=new_ulid(),
-            user_id=user_id,
-            period_start=period_start,
-            shots_used=1,
+    async def create_or_increment_usage(self, user_id: str, period_start: date) -> int:
+        """Atomically increment shots_used via upsert, returning the new count."""
+        result = await self.db.execute(
+            text("""
+                INSERT INTO user_monthly_usage (id, user_id, period_start, shots_used)
+                VALUES (:id, :user_id, :period_start, 1)
+                ON CONFLICT (user_id, period_start) DO UPDATE
+                SET shots_used = shots_used + 1
+                RETURNING shots_used
+            """),
+            {
+                "id": new_ulid(),
+                "user_id": user_id,
+                "period_start": period_start,
+            },
         )
-        self.db.add(usage)
-        await self.db.flush()
-        await self.db.refresh(usage)
-        return usage
+        row = result.one()
+        return row[0]
 
     async def get_shots_used_in_period(self, user_id: str, period_start: date) -> int:
         usage = await self.get_usage(user_id, period_start)

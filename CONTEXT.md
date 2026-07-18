@@ -98,15 +98,16 @@ app/
 ### Chrome Extension (apps/extension/)
 
 - Built with WXT (Web Extension Tools), React 19, Vitest + jsdom + React Testing Library (40+ tests).
-- **Service worker owns all API calls** — popup and options pages communicate via `chrome.runtime.sendMessage`. The service worker is a privileged context that bypasses CORS.
+- **Service worker owns all API calls** — popup, options, and content script communicate via `chrome.runtime.sendMessage`. The service worker is a privileged context that bypasses CORS.
 - Auth tokens stored in `chrome.storage.local` via a `TokenStore` implementation (same interface as web's `localStorage` variant).
-- Env vars baked at build time via WXT/Vite env system (`VITE_API_URL`, etc.).
+- Env vars baked at build time via WXT/Vite env system (`VITE_API_URL`, `VITE_FRONTEND_URL`).
 - Extension delegates billing UI to the web app — no billing screens inside the extension.
-- Tests in `apps/extension/src/__tests__/`: background handler tests (20), token-store tests (12), popup login form RTL tests (8). Setup file mocks `chrome.*` APIs.
-- Options page: full-height sidebar layout (matches web dashboard) with Profile, Organization (org switcher when >1 org), Billing (links to web app), Logout.
-- Popup sends `REFRESH` before `GET_ME` on mount for silent token refresh.
+- Tests in `apps/extension/src/__tests__/`: background handler tests (20), token-store tests (12), popup login form RTL tests (8), content script tests (autofill matching, button injection). Setup file mocks `chrome.*` APIs.
+- **Options page**: full-height sidebar layout (matches web dashboard) with Profile, Organization (org switcher when >1 org), Billing (links to web app), Logout.
+- **Popup**: auth UI (login, register, MFA, logout) + shots-remaining counter for FREE users. Sends `REFRESH` before `GET_ME` on mount for silent token refresh.
+- **Content script** (`src/entrypoints/content.ts`): runs on `*://indeed.com/*`. Injects "Shoot" button into Indeed apply modal via MutationObserver. Scrapes JD text, calls `SHOOT_JOB` handler, auto-fills form fields from `auto_fill_fields` response. Button disabled when no master resume.
 - Token refresh via 15-min `chrome.alarms` with concurrency guard.
-- Message types: LOGIN, REGISTER, MFA_VALIDATE, FORGOT_PASSWORD, RESET_PASSWORD, GET_ME, LOGOUT, REFRESH, API_REQUEST.
+- Message types: LOGIN, REGISTER, MFA_VALIDATE, FORGOT_PASSWORD, RESET_PASSWORD, GET_ME, LOGOUT, REFRESH, API_REQUEST, SHOOT_JOB, OPEN_POPUP, GET_SHOTS_REMAINING.
 - Shared code (`AuthService`, `TokenStore` interface, schemas, utils, config) lives in `packages/shared/`.
 - `biome.json` per workspace, no root config. Extension has `.env.example` with `VITE_API_URL` + `VITE_FRONTEND_URL`.
 

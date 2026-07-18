@@ -70,10 +70,13 @@ def assert_feature_available(plan: PlanTier, feature: str) -> None:
         )
 
 
+SHOT_LIMIT_EXCEEDED = "Upgrade to PRO for unlimited shots."
+
+
 def assert_shot_available(plan: PlanTier, current_usage: int) -> None:
     limits = PlanLimits.for_plan(plan)
     if limits.max_shots_per_month is not None and current_usage >= limits.max_shots_per_month:
         raise PaymentRequiredError(
             f"Your plan allows {limits.max_shots_per_month} shots per month. "
-            "Upgrade to PRO for unlimited shots."
+            + SHOT_LIMIT_EXCEEDED
         )

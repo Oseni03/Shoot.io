@@ -96,3 +96,39 @@ Extension: copy `apps/extension/.env.example` → `apps/extension/.env`, set `VI
 | `CONTEXT.md` (root) | Filled — stack, invariants, patterns |
 | `DOMAIN.md` (root) | Filled — domain glossary |
 | `docs/adr/0001-chrome-extension-architecture.md` | Filled — WXT choice, service worker API proxy, shared workspace |
+
+## Issues
+
+Tracked in `docs/issues/`. One file per slice (TDD tracer bullet). Status in frontmatter `labels:` field.
+
+| # | Title | Status |
+|---|-------|--------|
+| 001 | Extension scaffold + login flow | ✅ implemented |
+| 002 | Extract shared code from web app | ✅ implemented |
+| 003 | Extension registration, MFA, error states | ✅ implemented |
+| 004 | Extension options page | ✅ implemented |
+| 005 | Extension token refresh (alarms) | ✅ implemented |
+| 006 | Extension polish, CI, tests, docs | ✅ implemented |
+| 007 | Shoot — one-click resume tailoring (meta) | ✅ implemented |
+| 008 | Plan tiers + shot tracking | ✅ implemented |
+| 009 | Resume CRUD + master invariant | ✅ implemented |
+| 010 | Three-column resume editor | ✅ implemented |
+| 011 | TailoringService AI integration | ✅ implemented |
+| 012 | Shoot endpoint + extension SW handler | ✅ implemented |
+| 013 | Indeed content script | ✅ implemented |
+| 014 | Shots remaining UI (popup + toolbar) | ✅ implemented |
+| 015 | MFA code in body, not query param | ✅ implemented |
+| 016 | Org membership checks on billing/org endpoints | ✅ implemented |
+| 017 | Resume update partial section data-loss fix | ✅ implemented |
+| 018 | Autofill false match on unnamed inputs | ✅ implemented |
+| 019 | Shot limit atomic check and increment | 🔲 ready-for-agent |
+| 020 | Web auth token lifecycle hardening | 🔲 ready-for-agent |
+| 021 | Deterministic multi-org plan resolution | 🔲 ready-for-agent |
+| 022 | Master resume toggle UI/backend mismatch | 🔲 ready-for-agent |
+| 023 | Autosave flush on navigation | 🔲 ready-for-agent |
+| 024 | Shoot button disabled until master check resolves | 🔲 ready-for-agent |
+| 025 | Billing webhook unrecognized plan code handling | 🔲 ready-for-agent |
+| 026 | Tailoring AI response validation | 🔲 ready-for-agent |
+| 027 | Member management error toasts | 🔲 ready-for-agent |
+| 028 | Shared PlanTier ULTIMATE enum | 🔲 ready-for-agent |
+| 029 | Extension 402 shot-limit toast | 🔲 ready-for-agent |

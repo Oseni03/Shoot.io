@@ -16,9 +16,10 @@ React 19 Chrome extension built with WXT, part of the resumio monorepo.
 ## Architecture
 
 ### Entrypoints
-- **Service worker** (`src/entrypoints/background.ts`) — message handler for LOGIN, REGISTER, MFA_VALIDATE, FORGOT_PASSWORD, RESET_PASSWORD, GET_ME, LOGOUT, REFRESH, API_REQUEST. Manages token refresh via `chrome.alarms` (15-min interval).
-- **Popup** (`src/entrypoints/popup/`) — Auth UI (login, register, MFA, logout). Sends REFRESH before GET_ME on mount. 360px wide.
+- **Service worker** (`src/entrypoints/background.ts`) — message handler for LOGIN, REGISTER, MFA_VALIDATE, FORGOT_PASSWORD, RESET_PASSWORD, GET_ME, LOGOUT, REFRESH, API_REQUEST, SHOOT_JOB, OPEN_POPUP, GET_SHOTS_REMAINING. Manages token refresh via `chrome.alarms` (15-min interval). All API calls go through SW to bypass CORS.
+- **Popup** (`src/entrypoints/popup/`) — Auth UI (login, register, MFA, logout), shots-remaining counter for FREE users. Sends REFRESH before GET_ME on mount. 360px wide.
 - **Options page** (`src/entrypoints/options/`) — Full-height sidebar with Profile / Organization / Billing sections. Org switcher, active org persistence.
+- **Content script** (`src/entrypoints/content.ts`) — Runs on `*://indeed.com/*`. Injects "Shoot" button into Indeed apply modal, scrapes JD text, sends SHOOT_JOB to service worker, auto-fills form fields on success. MutationObserver for dynamic modals. Button disabled when no master resume.
 
 ### Message types (`src/types.ts`)
 | Type | Direction | Purpose |
@@ -32,14 +33,21 @@ React 19 Chrome extension built with WXT, part of the resumio monorepo.
 | LOGOUT | → SW | Clear tokens |
 | REFRESH | → SW | Silent token refresh |
 | API_REQUEST | → SW | Generic API call (needs auth) |
-| SHOOT_JOB | → SW | Tailor resume for a job (JD text, source URL) |
+| SHOOT_JOB | → SW | Tailor resume for a job (JD text, source URL) — returns auto_fill_fields |
 | OPEN_POPUP | → SW | Open extension popup (with fallback URL) |
+| GET_SHOTS_REMAINING | → SW | Fetch shots remaining and period end |
 
 ### Token refresh
 - On mount: popup/options send REFRESH before GET_ME
 - Alarm: 15-min `chrome.alarms` for silent refresh
 - Concurrency guard: one refresh in flight at a time
 - Tokens never cleared on refresh failure — retried next cycle
+
+### Autofill
+- Content script matches form fields by name, id, aria-label, placeholder, or label text
+- Known mappings: name, email, phone, headline, summary/cover letter
+- Dispatches native `input` + `change` events for React/Vue detection
+- Skips file inputs. Empty name/id/label never matches.
 
 ### Shared workspace
 `packages/shared/` provides AuthService, TokenStore interface, Zod schemas, config constants. Framework-independent — no React/Next.js deps.
