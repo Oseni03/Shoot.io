@@ -6,9 +6,13 @@ A production-ready FastAPI backend with authentication, multi-tenant organizatio
 
 | Feature           | Details                                                                                                          |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Auth**          | Register, login, JWT access + refresh tokens, email verification, password reset, Google/GitHub OAuth, MFA-ready |
+| **Auth**          | Register, login, JWT access + refresh tokens, email verification, password reset, Google/GitHub OAuth, TOTP MFA  |
 | **Organizations** | Multi-tenant with member roles (Owner, Admin, Member, Viewer), invite-by-email flow                              |
-| **Billing**       | Stripe Checkout, Billing Portal, webhook handling, plan sync (Free / Pro / Ultimate)                             |
+| **Billing**       | Paystack Checkout, manage URLs, webhook handling, plan sync (Free / Pro / Ultimate)                              |
+| **Resumes**       | Full CRUD with 6 normalized sections, master resume invariant (partial unique index), tailored snapshots         |
+| **Shoot**         | One-click resume tailoring: AI rewrites master resume against JD, shot limit enforcement, auto-fill field mapping|
+| **AI Tailoring**  | OpenAI / Anthropic integration via abstracted provider, structured prompt, response parsing into sections        |
+| **Auto-fill**     | Flat field→value mapping for extension content script form filling (Indeed apply modal)                          |
 | **Email**         | Resend integration — verification, password reset, invitations, welcome email                                    |
 | **Notifications** | In-app notification center with read/unread state                                                                |
 | **Audit Log**     | Every sensitive action is logged with actor, resource, and IP                                                    |
@@ -134,23 +138,54 @@ PATCH /api/v1/users/me
 POST /api/v1/users/me/change-password
 DELETE /api/v1/users/me
 
+GET /api/v1/auth/google
+GET /api/v1/auth/google/callback
+GET /api/v1/auth/github
+GET /api/v1/auth/github/callback
+
+POST /api/v1/mfa/setup
+POST /api/v1/mfa/verify
+POST /api/v1/mfa/disable
+POST /api/v1/mfa/validate
+
 POST /api/v1/organizations
 GET /api/v1/organizations
 GET /api/v1/organizations/{id}
 PATCH /api/v1/organizations/{id}
 DELETE /api/v1/organizations/{id}
 POST /api/v1/organizations/{id}/invitations
+GET /api/v1/organizations/{id}/invitations
+DELETE /api/v1/organizations/{id}/invitations/{invitation_id}
 POST /api/v1/organizations/invitations/accept
+GET /api/v1/organizations/{id}/members
 PATCH /api/v1/organizations/{id}/members/{user_id}
 DELETE /api/v1/organizations/{id}/members/{user_id}
 
-POST /api/v1/billing/organizations/{id}/checkout
-POST /api/v1/billing/organizations/{id}/portal
-POST /api/v1/billing/webhooks/stripe
+POST /api/v1/resumes
+GET /api/v1/resumes
+GET /api/v1/resumes/{id}
+PUT /api/v1/resumes/{id}
+DELETE /api/v1/resumes/{id}
+POST /api/v1/resumes/{id}/master
+POST /api/v1/resumes/shoot
+GET /api/v1/resumes/shots/remaining
+GET /api/v1/resumes/tailored
+
+POST /api/v1/billing/organizations/{id}/initialize
+GET /api/v1/billing/verify
+GET /api/v1/billing/organizations/{id}/manage
+POST /api/v1/billing/organizations/{id}/cancel
+POST /api/v1/billing/webhooks/paystack
 
 GET /api/v1/notifications
 POST /api/v1/notifications/{id}/read
 POST /api/v1/notifications/read-all
+
+GET /api/v1/admin/stats
+GET /api/v1/admin/users
+GET /api/v1/admin/organizations
+PATCH /api/v1/admin/users/{user_id}/deactivate
+PATCH /api/v1/admin/users/{user_id}/activate
 
 GET /api/v1/health
 GET /api/v1/ready

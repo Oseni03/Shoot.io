@@ -18,7 +18,7 @@ The frontend sends camelCase JSON, but expects snake_case JSON in responses. All
 | Enum               | Values                                                    |
 | ------------------ | --------------------------------------------------------- |
 | `MemberRole`       | `"viewer"` \| `"member"` \| `"admin"` \| `"owner"`        |
-| `PlanTier`         | `"free"` \| `"pro"` \| `"enterprise"`                     |
+| `PlanTier`         | `"free"` \| `"pro"` \| `"ultimate"` (legacy `"enterprise"` kept for rollback safety) |
 | `InvitationStatus` | `"pending"` \| `"accepted"` \| `"expired"` \| `"revoked"` |
 
 ## Pagination
@@ -675,7 +675,7 @@ Returns the number of shoot actions remaining in the current billing period. `nu
 
 **Usage notes:**
 - FREE plan: `shots_remaining` is 0–3, never null
-- PRO/Enterprise plans: `shots_remaining` is `null` (unlimited)
+- PRO/ULTIMATE plans: `shots_remaining` is `null` (unlimited)
 - The frontend renders the counter only when `shots_remaining` is not null and > 0; at 0 it shows an upgrade link
 
 ---

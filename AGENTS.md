@@ -121,8 +121,8 @@ Tracked in `docs/issues/`. One file per slice (TDD tracer bullet). Status in fro
 | 016 | Org membership checks on billing/org endpoints | ✅ implemented |
 | 017 | Resume update partial section data-loss fix | ✅ implemented |
 | 018 | Autofill false match on unnamed inputs | ✅ implemented |
-| 019 | Shot limit atomic check and increment | 🔲 ready-for-agent |
-| 020 | Web auth token lifecycle hardening | 🔲 ready-for-agent |
+| 019 | Shot limit atomic check and increment | ✅ implemented |
+| 020 | Web auth token lifecycle hardening | ✅ implemented |
 | 021 | Deterministic multi-org plan resolution | 🔲 ready-for-agent |
 | 022 | Master resume toggle UI/backend mismatch | 🔲 ready-for-agent |
 | 023 | Autosave flush on navigation | 🔲 ready-for-agent |

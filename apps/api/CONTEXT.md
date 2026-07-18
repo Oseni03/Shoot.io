@@ -57,5 +57,5 @@ End-to-end flow: tailor master resume against JD via AI → record shot → map 
 - Permission checks verify both membership and role hierarchy before allowing actions
 - All organizational operations go through Member validation first
 - Resume data is User-scoped, not Organization-scoped — queries filter by user_id
-- Shot limit check and increment are NOT atomic (see Issue 019 for planned fix)
+- Shot limit check and increment are atomic — `ShotService.assert_and_record_shot()` uses a single `INSERT ... ON CONFLICT ... DO UPDATE ... RETURNING` upsert, checking the limit against the returned post-increment count
 """
