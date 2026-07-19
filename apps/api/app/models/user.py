@@ -50,7 +50,8 @@ class User(Base, TimestampMixin):
 
     # Relationships
     memberships: Mapped[list["Membership"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user", cascade="all, delete-orphan",
+        order_by="Membership.created_at",
     )
     notifications: Mapped[list["Notification"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

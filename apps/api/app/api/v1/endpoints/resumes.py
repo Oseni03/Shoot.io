@@ -27,6 +27,8 @@ router = APIRouter(prefix="/resumes", tags=["resumes"])
 
 
 def _resolve_plan(user: User) -> str:
+    # memberships is ordered by created_at ascending (see User.memberships) —
+    # earliest-joined org's plan gates shot limits, as a deterministic tiebreak.
     if user.memberships:
         return user.memberships[0].organization.plan.value
     return "free"

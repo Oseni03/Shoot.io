@@ -428,3 +428,98 @@ async def test_shoot_pro_plan_never_limited(
 
     remaining = await client.get("/api/v1/resumes/shots/remaining", headers=headers)
     assert remaining.json()["shots_remaining"] is None
+
+
+async def _multi_org_auth_headers(db_session: AsyncSession) -> dict[str, str]:
+    """User with a FREE membership created before a PRO membership."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.core.security import create_access_token
+    from app.lib.ulid import new_ulid
+    from app.models.membership import MemberRole, Membership
+    from app.models.organization import Organization, PlanTier
+    from app.models.user import User
+
+    user = User(
+        id=new_ulid(),
+        email="multi-org-shoot@example.com",
+        hashed_password="hashed_placeholder",
+        is_verified=True,
+        is_active=True,
+    )
+    free_org = Organization(
+        id=new_ulid(), name="Free Org", slug="free-org-shoot", plan=PlanTier.FREE
+    )
+    pro_org = Organization(
+        id=new_ulid(), name="Pro Org", slug="pro-org-shoot-2", plan=PlanTier.PRO
+    )
+    db_session.add_all([user, free_org, pro_org])
+    await db_session.flush()
+
+    earlier = datetime.now(UTC) - timedelta(hours=1)
+    later = datetime.now(UTC)
+    db_session.add_all([
+        Membership(
+            id=new_ulid(),
+            user_id=user.id,
+            organization_id=free_org.id,
+            role=MemberRole.OWNER,
+            created_at=earlier,
+        ),
+        Membership(
+            id=new_ulid(),
+            user_id=user.id,
+            organization_id=pro_org.id,
+            role=MemberRole.OWNER,
+            created_at=later,
+        ),
+    ])
+    await db_session.flush()
+    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+
+
+@pytest.mark.asyncio
+async def test_shoot_multi_org_resolves_to_earliest_membership_plan(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A user with a FREE membership created before a PRO membership should be
+    gated by the FREE plan's shot limit, consistently, not whichever order the
+    DB happens to return memberships in."""
+    headers = await _multi_org_auth_headers(db_session)
+
+    await client.post(
+        "/api/v1/resumes",
+        json={"title": "Master", "is_master": True},
+        headers=headers,
+    )
+
+    async def mock_call_ai(_prompt: str) -> str:
+        return json.dumps({
+            "summary": "Tailored.",
+            "experiences": [],
+            "educations": [],
+            "skills": [],
+            "projects": [],
+            "certifications": [],
+        })
+
+    monkeypatch.setattr("app.services.tailoring_service.call_ai", mock_call_ai)
+
+    for _ in range(3):
+        res = await client.post(
+            "/api/v1/resumes/shoot",
+            json={"job_description_text": "We need a developer with at least five years of experience in the field."},
+            headers=headers,
+        )
+        assert res.status_code == 200
+
+    # Repeated calls consistently resolve to the FREE plan — the 4th shot is limited.
+    res = await client.post(
+        "/api/v1/resumes/shoot",
+        json={"job_description_text": "We need a developer with at least five years of experience in the field."},
+        headers=headers,
+    )
+    assert res.status_code == 402
+
+    remaining = await client.get("/api/v1/resumes/shots/remaining", headers=headers)
+    assert remaining.json()["shots_remaining"] == 0
