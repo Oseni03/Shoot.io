@@ -246,7 +246,14 @@ export default function MembersPage() {
 				queryKey: [...MEMBERS_KEY, orgId],
 			});
 		},
-		onError: () => {},
+		onError: (err) => {
+			toast.error(
+				extractApiErrorMessage(
+					err,
+					"Couldn't remove member — you may not have permission",
+				),
+			);
+		},
 	});
 
 	const roleMutation = useMutation({
@@ -258,7 +265,14 @@ export default function MembersPage() {
 				queryKey: [...MEMBERS_KEY, orgId],
 			});
 		},
-		onError: () => {},
+		onError: (err) => {
+			toast.error(
+				extractApiErrorMessage(
+					err,
+					"Couldn't update role — you may not have permission",
+				),
+			);
+		},
 	});
 
 	const revokeMutation = useMutation({
@@ -272,7 +286,14 @@ export default function MembersPage() {
 				refetchType: "all",
 			});
 		},
-		onError: () => {},
+		onError: (err) => {
+			toast.error(
+				extractApiErrorMessage(
+					err,
+					"Couldn't revoke invitation — you may not have permission",
+				),
+			);
+		},
 	});
 
 	function onInvite(data: { email: string; role: MemberRole }) {
