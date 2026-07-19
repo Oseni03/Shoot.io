@@ -455,10 +455,13 @@ export function useResumeEditor(resumeId: string | null) {
 	}
 
 	async function toggleMaster() {
-		if (!state.resumeId) return;
+		// There is no "unset master" server capability — the switch can only be
+		// turned on. Turning it off is handled by disabling the control in the
+		// UI (see top-toolbar.tsx) rather than reachable here.
+		if (!state.resumeId || state.isMaster) return;
 		try {
 			await setMasterResume.mutateAsync(state.resumeId);
-			setState((prev) => ({ ...prev, isMaster: !prev.isMaster }));
+			setState((prev) => ({ ...prev, isMaster: true }));
 			toast.success("Master resume updated");
 		} catch (err) {
 			toast.error(extractApiErrorMessage(err, "Failed to set master resume"));

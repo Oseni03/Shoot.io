@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2, Save, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useShotsRemaining } from "@/hooks/useResumes";
 import { cn } from "@/lib/utils";
 
@@ -42,16 +43,37 @@ export function TopToolbar({
 				<div className="flex items-center gap-2">
 					<Label
 						htmlFor="master-toggle"
-						className="text-[10px] font-mono uppercase tracking-widest text-foreground/50 cursor-pointer"
+						className={cn(
+							"text-[10px] font-mono uppercase tracking-widest text-foreground/50",
+							isMaster ? "cursor-default" : "cursor-pointer",
+						)}
 					>
 						Master
 					</Label>
-					<Switch
-						id="master-toggle"
-						checked={isMaster}
-						onCheckedChange={onToggleMaster}
-						className="scale-75"
-					/>
+					{isMaster ? (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<span>
+									<Switch
+										id="master-toggle"
+										checked={isMaster}
+										disabled
+										className="scale-75"
+									/>
+								</span>
+							</TooltipTrigger>
+							<TooltipContent>
+								Set another resume as master to change this
+							</TooltipContent>
+						</Tooltip>
+					) : (
+						<Switch
+							id="master-toggle"
+							checked={isMaster}
+							onCheckedChange={onToggleMaster}
+							className="scale-75"
+						/>
+					)}
 				</div>
 
 				<div className="flex items-center gap-1.5 text-[10px] font-mono text-foreground/40">
