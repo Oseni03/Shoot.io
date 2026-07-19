@@ -124,6 +124,130 @@ async def test_handle_webhook_invalid_signature_raises(db_session) -> None:
 
 
 @pytest.mark.asyncio
+async def test_verify_transaction_unrecognized_plan_code_leaves_plan_unchanged(
+    db_session,
+) -> None:
+    org = _make_org(db_session, plan=PlanTier.PRO)
+    await db_session.flush()
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "data": {
+            "status": "success",
+            "metadata": {"organization_id": org.id},
+            "plan": {"plan_code": "PLN_does_not_exist"},
+            "customer": {"customer_code": "CUS_test123"},
+        }
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with (
+        patch("app.services.billing_service.PLAN_CODE_MAP", {PlanTier.PRO: "PLN_pro"}),
+        patch(
+            "app.services.billing_service.CODE_PLAN_MAP", {"PLN_pro": PlanTier.PRO}
+        ),
+        patch("httpx.AsyncClient") as mock_client,
+        patch("app.services.billing_service.logger") as mock_logger,
+    ):
+        mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+            return_value=mock_response
+        )
+        svc = BillingService(db_session)
+        result = await svc.verify_transaction("ref_test")
+
+    assert result["plan"] == PlanTier.PRO
+    await db_session.refresh(org)
+    assert org.plan == PlanTier.PRO
+    mock_logger.error.assert_called_once()
+    assert mock_logger.error.call_args.kwargs["plan_code"] == "PLN_does_not_exist"
+    assert mock_logger.error.call_args.kwargs["org_id"] == org.id
+
+
+@pytest.mark.asyncio
+async def test_verify_transaction_recognized_plan_code_updates_plan(
+    db_session,
+) -> None:
+    org = _make_org(db_session, plan=PlanTier.FREE)
+    await db_session.flush()
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "data": {
+            "status": "success",
+            "metadata": {"organization_id": org.id},
+            "plan": {"plan_code": "PLN_pro"},
+            "customer": {"customer_code": "CUS_test123"},
+        }
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with (
+        patch("app.services.billing_service.PLAN_CODE_MAP", {PlanTier.PRO: "PLN_pro"}),
+        patch(
+            "app.services.billing_service.CODE_PLAN_MAP", {"PLN_pro": PlanTier.PRO}
+        ),
+        patch("httpx.AsyncClient") as mock_client,
+    ):
+        mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+            return_value=mock_response
+        )
+        svc = BillingService(db_session)
+        result = await svc.verify_transaction("ref_test")
+
+    assert result["plan"] == PlanTier.PRO
+    await db_session.refresh(org)
+    assert org.plan == PlanTier.PRO
+
+
+@pytest.mark.asyncio
+async def test_subscription_create_unrecognized_plan_code_leaves_plan_unchanged(
+    db_session,
+) -> None:
+    org = _make_org(db_session, plan=PlanTier.PRO)
+    await db_session.flush()
+
+    with (
+        patch(
+            "app.services.billing_service.CODE_PLAN_MAP", {"PLN_pro": PlanTier.PRO}
+        ),
+        patch("app.services.billing_service.logger") as mock_logger,
+    ):
+        svc = BillingService(db_session)
+        await svc._on_subscription_create({
+            "metadata": {"organization_id": org.id},
+            "plan": {"plan_code": "PLN_does_not_exist"},
+            "subscription_code": "SUB_test123",
+        })
+
+    await db_session.refresh(org)
+    assert org.plan == PlanTier.PRO
+    mock_logger.error.assert_called_once()
+    assert mock_logger.error.call_args.kwargs["plan_code"] == "PLN_does_not_exist"
+    assert mock_logger.error.call_args.kwargs["org_id"] == org.id
+
+
+@pytest.mark.asyncio
+async def test_subscription_create_recognized_plan_code_updates_plan(
+    db_session,
+) -> None:
+    org = _make_org(db_session, plan=PlanTier.FREE)
+    await db_session.flush()
+
+    with patch(
+        "app.services.billing_service.CODE_PLAN_MAP", {"PLN_pro": PlanTier.PRO}
+    ):
+        svc = BillingService(db_session)
+        await svc._on_subscription_create({
+            "metadata": {"organization_id": org.id},
+            "plan": {"plan_code": "PLN_pro"},
+            "subscription_code": "SUB_test123",
+        })
+
+    await db_session.refresh(org)
+    assert org.plan == PlanTier.PRO
+
+
+@pytest.mark.asyncio
 async def test_handle_webhook_valid_signature(db_session) -> None:
     import hashlib
     import hmac

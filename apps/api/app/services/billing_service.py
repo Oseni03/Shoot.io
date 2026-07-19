@@ -120,11 +120,21 @@ class BillingService:
         if not org:
             raise NotFoundError("Organization")
 
-        plan = CODE_PLAN_MAP.get(tx.get("plan", {}).get("plan_code", ""), PlanTier.FREE)
+        plan_code = tx.get("plan", {}).get("plan_code", "")
+        plan = CODE_PLAN_MAP.get(plan_code)
+        if plan is None:
+            logger.error(
+                "billing.unrecognized_plan_code",
+                plan_code=plan_code,
+                org_id=org_id,
+                reference=reference,
+            )
+        else:
+            org.plan = plan
+        plan = plan or org.plan
 
         # Persist customer code
         org.paystack_customer_id = tx["customer"]["customer_code"]
-        org.plan = plan
         await self.org_repo.save(org)
 
         # Upsert subscription if one was created
@@ -237,11 +247,16 @@ class BillingService:
         if not org_id:
             return
 
-        plan = CODE_PLAN_MAP.get(
-            (data.get("plan") or {}).get("plan_code", ""), PlanTier.FREE
-        )
         sub_code = data.get("subscription_code", "")
         plan_code = (data.get("plan") or {}).get("plan_code", "")
+        plan = CODE_PLAN_MAP.get(plan_code)
+        if plan is None:
+            logger.error(
+                "billing.unrecognized_plan_code",
+                plan_code=plan_code,
+                org_id=org_id,
+                sub_code=sub_code,
+            )
 
         await self._upsert_subscription_record(
             org_id=org_id,
@@ -251,10 +266,11 @@ class BillingService:
             next_payment=data.get("next_payment_date"),
         )
 
-        org = await self.org_repo.get_by_id(org_id)
-        if org:
-            org.plan = plan
-            await self.org_repo.save(org)
+        if plan is not None:
+            org = await self.org_repo.get_by_id(org_id)
+            if org:
+                org.plan = plan
+                await self.org_repo.save(org)
 
     async def _on_subscription_disable(self, data: dict) -> None:  # type: ignore[type-arg]
         sub_code = data.get("subscription_code", "")
