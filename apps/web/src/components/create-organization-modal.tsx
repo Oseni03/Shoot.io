@@ -169,8 +169,8 @@ export function CreateOrganizationModal({
 														desc: "Advanced features for growing teams",
 													},
 													{
-														value: "enterprise" as PlanTier,
-														label: "Enterprise",
+														value: "ultimate" as PlanTier,
+														label: "Ultimate",
 														desc: "Custom solutions and support",
 													},
 												].map((option) => (

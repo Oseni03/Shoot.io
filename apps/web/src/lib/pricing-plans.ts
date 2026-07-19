@@ -37,8 +37,8 @@ export const PRICING_PLANS: PricingPlan[] = [
 		cta: "Start Pro",
 	},
 	{
-		id: PlanTier.ENTERPRISE,
-		name: "Enterprise",
+		id: PlanTier.ULTIMATE,
+		name: "Ultimate",
 		priceMonthly: 299,
 		priceAnnually: 249,
 		description:
