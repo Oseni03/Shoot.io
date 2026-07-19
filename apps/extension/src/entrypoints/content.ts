@@ -459,13 +459,13 @@ function main(): void {
 
 	const initialModal = findModal();
 	if (initialModal) {
-		injectShootButton(initialModal, true);
+		injectShootButton(initialModal, hasMasterResume ?? false);
 	}
 
 	const observer = new MutationObserver(() => {
 		const m = findModal();
 		if (m && !m.querySelector("#shoot-button")) {
-			injectShootButton(m, hasMasterResume ?? true);
+			injectShootButton(m, hasMasterResume ?? false);
 		}
 	});
 	observer.observe(document.body, { childList: true, subtree: true });

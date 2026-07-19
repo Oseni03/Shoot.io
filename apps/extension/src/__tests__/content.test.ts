@@ -133,6 +133,66 @@ describe("content script", () => {
 		expect(shootButton.title).toBe("Set up your master resume first");
 	});
 
+	it("injects a disabled button before checkHasMasterResume resolves", () => {
+		// A promise that never resolves within this test simulates the window
+		// between button injection and the async master-resume check completing.
+		getSendMessage().mockImplementation(() => new Promise(() => {}));
+
+		const modal = createModal("Continue");
+		document.body.appendChild(modal);
+
+		contentScript.main();
+
+		const shootButton = document.querySelector(
+			"#shoot-button",
+		) as HTMLButtonElement;
+		expect(shootButton).not.toBeNull();
+		expect(shootButton.disabled).toBe(true);
+		expect(shootButton.title).toBe("Set up your master resume first");
+	});
+
+	it("enables an already-injected button once checkHasMasterResume resolves true", async () => {
+		let resolveCheck: (value: unknown) => void = () => {};
+		getSendMessage().mockImplementation(
+			() =>
+				new Promise((resolve) => {
+					resolveCheck = resolve;
+				}),
+		);
+
+		const modal = createModal("Continue");
+		document.body.appendChild(modal);
+
+		contentScript.main();
+
+		const shootButton = document.querySelector(
+			"#shoot-button",
+		) as HTMLButtonElement;
+		expect(shootButton.disabled).toBe(true);
+
+		resolveCheck({ success: true, data: [{ id: "r1", is_master: true }] });
+		await flushMicrotasks();
+
+		expect(shootButton.disabled).toBe(false);
+	});
+
+	it("reflects the already-resolved state immediately for a button injected afterwards", async () => {
+		contentScript.main();
+		await flushMicrotasks();
+
+		expect(document.querySelector("#shoot-button")).toBeNull();
+
+		const modal = createModal("Continue");
+		document.body.appendChild(modal);
+		await flushMicrotasks();
+
+		const shootButton = document.querySelector(
+			"#shoot-button",
+		) as HTMLButtonElement;
+		expect(shootButton).not.toBeNull();
+		expect(shootButton.disabled).toBe(false);
+	});
+
 	it("sends REFRESH on UNAUTHORIZED before retrying master resume check", async () => {
 		getSendMessage()
 			.mockResolvedValueOnce({
