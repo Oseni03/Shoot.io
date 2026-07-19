@@ -123,12 +123,12 @@ Tracked in `docs/issues/`. One file per slice (TDD tracer bullet). Status in fro
 | 018 | Autofill false match on unnamed inputs | ✅ implemented |
 | 019 | Shot limit atomic check and increment | ✅ implemented |
 | 020 | Web auth token lifecycle hardening | ✅ implemented |
-| 021 | Deterministic multi-org plan resolution | 🔲 ready-for-agent |
-| 022 | Master resume toggle UI/backend mismatch | 🔲 ready-for-agent |
-| 023 | Autosave flush on navigation | 🔲 ready-for-agent |
-| 024 | Shoot button disabled until master check resolves | 🔲 ready-for-agent |
-| 025 | Billing webhook unrecognized plan code handling | 🔲 ready-for-agent |
-| 026 | Tailoring AI response validation | 🔲 ready-for-agent |
-| 027 | Member management error toasts | 🔲 ready-for-agent |
-| 028 | Shared PlanTier ULTIMATE enum | 🔲 ready-for-agent |
-| 029 | Extension 402 shot-limit toast | 🔲 ready-for-agent |
+| 021 | Deterministic multi-org plan resolution | ✅ implemented |
+| 022 | Master resume toggle UI/backend mismatch | 🔶 partial — no manual browser verification done (apps/web has no test framework) |
+| 023 | Autosave flush on navigation | 🔶 partial — no manual browser verification done (apps/web has no test framework) |
+| 024 | Shoot button disabled until master check resolves | ✅ implemented |
+| 025 | Billing webhook unrecognized plan code handling | ✅ implemented |
+| 026 | Tailoring AI response validation | ✅ implemented |
+| 027 | Member management error toasts | 🔶 partial — no manual browser verification done (apps/web has no test framework) |
+| 028 | Shared PlanTier ULTIMATE enum | ✅ implemented |
+| 029 | Extension 402 shot-limit toast | ✅ implemented |
