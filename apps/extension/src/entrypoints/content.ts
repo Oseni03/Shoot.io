@@ -251,6 +251,10 @@ async function handleOpenPopup(): Promise<void> {
 	}
 }
 
+function handleOpenBilling(): void {
+	window.open(`${FRONTEND_URL}/dashboard/settings/billing`, "_blank");
+}
+
 async function handleShoot(shootButton: HTMLButtonElement): Promise<void> {
 	if (shootInProgress) return;
 
@@ -282,6 +286,12 @@ async function handleShoot(shootButton: HTMLButtonElement): Promise<void> {
 			if (result.code === "UNAUTHORIZED") {
 				showToast("Please sign in to use Shoot.", "error");
 				await handleOpenPopup();
+			} else if (result.code === "SHOT_LIMIT_EXCEEDED") {
+				showToast(
+					"Monthly shot limit reached — Upgrade to PRO for unlimited shots",
+					"error",
+				);
+				handleOpenBilling();
 			} else {
 				showToast(result.error ?? "Shoot failed. Try again.", "error");
 			}

@@ -314,11 +314,18 @@ async function handleMessage(
 				}
 
 				if (!response.ok) {
+					const body = responseBody as Record<string, unknown>;
 					const detail =
-						(responseBody as Record<string, unknown>)?.detail ??
-						(responseBody as Record<string, unknown>)?.message ??
+						body?.detail ??
+						body?.message ??
 						`Shoot failed with status ${response.status}`;
-					sendResponse({ success: false, error: String(detail) });
+					const code =
+						typeof body?.code === "string" ? body.code : undefined;
+					sendResponse({
+						success: false,
+						error: String(detail),
+						code,
+					});
 					return;
 				}
 

@@ -432,6 +432,42 @@ describe("content script", () => {
 		expect(shootButton.disabled).toBe(false);
 	});
 
+	it("shows an upgrade toast and opens billing on a shot-limit (402) response", async () => {
+		getSendMessage()
+			.mockResolvedValueOnce({
+				success: true,
+				data: [{ id: "r1", is_master: true }],
+			})
+			.mockResolvedValueOnce({
+				success: false,
+				error: "Your plan allows 3 shots per month. Upgrade to PRO for unlimited shots.",
+				code: "SHOT_LIMIT_EXCEEDED",
+			});
+
+		const modal = createModal("Continue", true);
+		document.body.appendChild(modal);
+
+		contentScript.main();
+		await flushMicrotasks();
+
+		const shootButton = document.querySelector(
+			"#shoot-button",
+		) as HTMLButtonElement;
+
+		shootButton.click();
+		await flushMicrotasks();
+
+		const toast = document.querySelector("#shoot-toast");
+		expect(toast).not.toBeNull();
+		expect(toast?.textContent).toBe(
+			"Monthly shot limit reached — Upgrade to PRO for unlimited shots",
+		);
+		expect(window.open).toHaveBeenCalledWith(
+			expect.stringContaining("/dashboard/settings/billing"),
+			"_blank",
+		);
+	});
+
 	it("opens popup on UNAUTHORIZED and falls back to login tab on failure", async () => {
 		getSendMessage()
 			.mockResolvedValueOnce({
