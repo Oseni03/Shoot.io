@@ -206,3 +206,59 @@ class TailoredResumeResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── AI tailoring response shape ─────────────────────────────────────────
+# Validates the AI's raw JSON response before it reaches AutoFillService,
+# which assumes each section item is a dict with these fields.
+
+class TailoredExperienceSection(BaseModel):
+    company: str
+    title: str
+    location: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    is_current: bool = False
+    bullets: list[str] = []
+    sort_order: int = 0
+
+
+class TailoredEducationSection(BaseModel):
+    school: str
+    degree: str | None = None
+    field: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    gpa: float | None = None
+    sort_order: int = 0
+
+
+class TailoredSkillSection(BaseModel):
+    name: str
+    proficiency: int | None = None
+    sort_order: int = 0
+
+
+class TailoredProjectSection(BaseModel):
+    name: str
+    description: str | None = None
+    url: str | None = None
+    technologies: list[str] = []
+    sort_order: int = 0
+
+
+class TailoredCertificationSection(BaseModel):
+    name: str
+    issuer: str | None = None
+    date: str | None = None
+    url: str | None = None
+    sort_order: int = 0
+
+
+class TailoredSections(BaseModel):
+    summary: str
+    experiences: list[TailoredExperienceSection] = []
+    educations: list[TailoredEducationSection] = []
+    skills: list[TailoredSkillSection] = []
+    projects: list[TailoredProjectSection] = []
+    certifications: list[TailoredCertificationSection] = []

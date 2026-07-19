@@ -5,6 +5,10 @@ from fastapi import HTTPException, status
 class AppError(HTTPException):
     """Base application error."""
 
+    #: Machine-readable code clients can branch on (e.g. the extension's
+    #: error-toast handling). None means the response body carries no "code".
+    code: str | None = None
+
 
 class NotFoundError(AppError):
     def __init__(self, resource: str = "Resource") -> None:
@@ -56,3 +60,11 @@ class RateLimitError(AppError):
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please slow down.",
         )
+
+
+class TailoringValidationError(AppError):
+    """The AI's tailored-resume response didn't match the expected shape."""
+
+    def __init__(self, detail: str = "Tailoring failed, try again.") -> None:
+        super().__init__(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail)
+        self.code = "TAILORING_FAILED"

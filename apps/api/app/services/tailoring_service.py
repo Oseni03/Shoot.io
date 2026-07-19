@@ -3,14 +3,16 @@
 import json
 from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppError, BadRequestError
+from app.core.exceptions import AppError, BadRequestError, TailoringValidationError
 from app.lib.ai import call_ai
 from app.lib.logger import logger
 from app.lib.ulid import new_ulid
 from app.models.resume import JobDescription, Resume, TailoredResume
 from app.repositories.resume_repo import ResumeRepository
+from app.schemas.resume import TailoredSections
 from app.services.resume_service import ResumeService
 
 TAILOR_PROMPT_V1 = """You are an expert resume tailor. Rewrite the following resume to match the job description below.
@@ -186,5 +188,12 @@ class TailoringService:
                 status_code=502,
                 detail=f"AI response missing required sections: {', '.join(sorted(missing))}",
             )
+
+        try:
+            TailoredSections.model_validate(sections)
+        except ValidationError as e:
+            raise TailoringValidationError(
+                f"AI response has an unexpected section shape: {e}"
+            ) from e
 
         return sections

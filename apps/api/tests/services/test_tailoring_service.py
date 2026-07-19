@@ -5,7 +5,12 @@ import json
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppError, BadRequestError, NotFoundError
+from app.core.exceptions import (
+    AppError,
+    BadRequestError,
+    NotFoundError,
+    TailoringValidationError,
+)
 from app.lib.ulid import new_ulid
 from app.models.resume import JobDescription, TailoredResume
 from app.models.user import User
@@ -323,6 +328,59 @@ async def test_tailor_missing_sections_raises_app_error(
 
     svc = TailoringService(db_session)
     with pytest.raises(AppError, match="missing required sections"):
+        await svc.tailor(
+            master_resume_id=master.id,
+            jd_text=_SAMPLE_JD,
+            user_id=user.id,
+        )
+
+
+@pytest.mark.parametrize(
+    "section",
+    ["experiences", "educations", "skills", "projects", "certifications"],
+)
+@pytest.mark.asyncio
+async def test_tailor_malformed_section_item_raises_tailoring_validation_error(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch, section: str
+) -> None:
+    """Each section's items must be objects with known fields — a section
+    that's a list of bare strings previously reached AutoFillService and
+    raised an unhandled AttributeError on .get()."""
+    user = await _create_user(db_session)
+    master = await _create_master(db_session, user.id)
+
+    malformed = {**VALID_SECTIONS, section: ["just a string"]}
+
+    async def mock_call_ai(_prompt: str) -> str:
+        return json.dumps(malformed)
+
+    monkeypatch.setattr("app.services.tailoring_service.call_ai", mock_call_ai)
+
+    svc = TailoringService(db_session)
+    with pytest.raises(TailoringValidationError):
+        await svc.tailor(
+            master_resume_id=master.id,
+            jd_text=_SAMPLE_JD,
+            user_id=user.id,
+        )
+
+
+@pytest.mark.asyncio
+async def test_tailor_malformed_summary_raises_tailoring_validation_error(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = await _create_user(db_session)
+    master = await _create_master(db_session, user.id)
+
+    malformed = {**VALID_SECTIONS, "summary": ["not", "a", "string"]}
+
+    async def mock_call_ai(_prompt: str) -> str:
+        return json.dumps(malformed)
+
+    monkeypatch.setattr("app.services.tailoring_service.call_ai", mock_call_ai)
+
+    svc = TailoringService(db_session)
+    with pytest.raises(TailoringValidationError):
         await svc.tailor(
             master_resume_id=master.id,
             jd_text=_SAMPLE_JD,

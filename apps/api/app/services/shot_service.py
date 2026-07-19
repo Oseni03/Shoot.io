@@ -58,6 +58,13 @@ class ShotService:
             )
         logger.info("shot.recorded", user_id=user_id, period=str(period))
 
+    async def release_shot(self, user_id: str) -> None:
+        """Undo a shot recorded by assert_and_record_shot() when the request
+        it was recorded for ultimately failed (e.g. tailoring validation)."""
+        period = self._current_period_start()
+        await self.repo.decrement_usage(user_id, period)
+        logger.info("shot.released", user_id=user_id, period=str(period))
+
     async def record_shot(self, user_id: str) -> None:
         """Increment shot count without checking limits. Prefer assert_and_record_shot."""
         period = self._current_period_start()

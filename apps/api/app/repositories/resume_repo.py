@@ -151,6 +151,14 @@ class ResumeRepository:
         row = result.one()
         return row[0]
 
+    async def decrement_usage(self, user_id: str, period_start: date) -> None:
+        """Undo a previously recorded shot (e.g. tailoring failed after the
+        shot was counted). No-op if there's no usage row or it's already 0."""
+        usage = await self.get_usage(user_id, period_start)
+        if usage and usage.shots_used > 0:
+            usage.shots_used -= 1
+            await self.db.flush()
+
     async def get_shots_used_in_period(self, user_id: str, period_start: date) -> int:
         usage = await self.get_usage(user_id, period_start)
         return usage.shots_used if usage else 0

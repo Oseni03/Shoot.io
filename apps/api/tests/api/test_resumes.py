@@ -321,6 +321,43 @@ async def test_shoot_success(
 
 
 @pytest.mark.asyncio
+async def test_shoot_malformed_ai_response_returns_controlled_error_and_no_shot_consumed(
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await client.post(
+        "/api/v1/resumes",
+        json={"title": "Master", "is_master": True},
+        headers=auth_headers,
+    )
+
+    async def mock_call_ai(_prompt: str) -> str:
+        return json.dumps({
+            "summary": "Tailored.",
+            "experiences": ["just a string"],
+            "educations": [],
+            "skills": [],
+            "projects": [],
+            "certifications": [],
+        })
+
+    monkeypatch.setattr("app.services.tailoring_service.call_ai", mock_call_ai)
+
+    before = await client.get("/api/v1/resumes/shots/remaining", headers=auth_headers)
+    shots_before = before.json()["shots_remaining"]
+
+    res = await client.post(
+        "/api/v1/resumes/shoot",
+        json={"job_description_text": "We need a developer with at least five years of experience in the field."},
+        headers=auth_headers,
+    )
+    assert res.status_code == 502
+    assert res.json()["code"] == "TAILORING_FAILED"
+
+    after = await client.get("/api/v1/resumes/shots/remaining", headers=auth_headers)
+    assert after.json()["shots_remaining"] == shots_before
+
+
+@pytest.mark.asyncio
 async def test_shots_remaining(client: AsyncClient, auth_headers: dict[str, str]) -> None:
     res = await client.get("/api/v1/resumes/shots/remaining", headers=auth_headers)
     assert res.status_code == 200

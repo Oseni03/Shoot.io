@@ -16,6 +16,7 @@ from slowapi.util import get_remote_address
 
 from app.api.v1.router import router as v1_router
 from app.config import project, settings
+from app.core.exceptions import AppError
 from app.db.session import engine
 from app.lib.logger import configure_logging, logger
 
@@ -100,6 +101,16 @@ def create_app() -> FastAPI:
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         return response
+
+    # ── App error handler (adds "code" to the body when the error sets one) ──
+    @app.exception_handler(AppError)
+    async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+        content: dict[str, object] = {"detail": exc.detail}
+        if exc.code:
+            content["code"] = exc.code
+        return JSONResponse(
+            status_code=exc.status_code, content=content, headers=exc.headers
+        )
 
     # ── Global exception handler ──────────────────────────────────────
     @app.exception_handler(Exception)

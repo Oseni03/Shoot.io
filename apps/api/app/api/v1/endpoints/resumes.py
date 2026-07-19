@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request, status
 
 from app.api.deps import DBDep, VerifiedUser
+from app.core.exceptions import TailoringValidationError
 from app.lib.logger import logger
 from app.models.organization import PlanTier
 from app.models.user import User
@@ -123,14 +124,21 @@ async def shoot(
     await shot_service.assert_and_record_shot(current_user.id, PlanTier(plan))
 
     tailoring_service = TailoringService(db)
-    tailored = await tailoring_service.tailor(
-        master_resume_id=master.id,
-        jd_text=payload.job_description_text,
-        user_id=current_user.id,
-        jd_source_url=payload.source_url,
-        jd_title=payload.job_title,
-        jd_company=payload.company,
-    )
+    try:
+        tailored = await tailoring_service.tailor(
+            master_resume_id=master.id,
+            jd_text=payload.job_description_text,
+            user_id=current_user.id,
+            jd_source_url=payload.source_url,
+            jd_title=payload.job_title,
+            jd_company=payload.company,
+        )
+    except TailoringValidationError:
+        # The shot was already recorded above (atomic check-and-increment
+        # happens before tailoring so concurrent requests can't race past the
+        # limit) — release it since this request produced nothing usable.
+        await shot_service.release_shot(current_user.id)
+        raise
 
     auto_fill_fields = autofill_service.map_fields(
         tailored.sections,
