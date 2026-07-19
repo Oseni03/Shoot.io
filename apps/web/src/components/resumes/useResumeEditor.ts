@@ -211,6 +211,10 @@ export function useResumeEditor(resumeId: string | null) {
 	const [lastSaved, setLastSaved] = useState<Date | null>(null);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const isLoaded = useRef(false);
+	const stateRef = useRef(state);
+	const dirtyRef = useRef(dirty);
+	stateRef.current = state;
+	dirtyRef.current = dirty;
 
 	useEffect(() => {
 		if (fetchedResume && !isLoaded.current) {
@@ -268,9 +272,25 @@ export function useResumeEditor(resumeId: string | null) {
 		[save],
 	);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally unmount-only; reads latest values via refs
 	useEffect(() => {
 		return () => {
-			if (debounceRef.current) clearTimeout(debounceRef.current);
+			if (!debounceRef.current) return;
+			clearTimeout(debounceRef.current);
+			debounceRef.current = null;
+			// A debounced save was still pending when this component unmounted
+			// (e.g. in-app navigation within the 1500ms window) — flush it now
+			// instead of silently dropping the edit. Uses .mutate (not
+			// mutateAsync + setState) since the component is already gone.
+			if (dirtyRef.current) {
+				const current = stateRef.current;
+				const payload = editorStateToPayload(current);
+				if (current.resumeId) {
+					updateResume.mutate({ id: current.resumeId, data: payload });
+				} else {
+					createResume.mutate(payload);
+				}
+			}
 		};
 	}, []);
 
