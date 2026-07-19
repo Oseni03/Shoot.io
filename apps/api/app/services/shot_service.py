@@ -54,7 +54,8 @@ class ShotService:
         if limits.max_shots_per_month is not None and new_count > limits.max_shots_per_month:
             raise PaymentRequiredError(
                 f"Your plan allows {limits.max_shots_per_month} shots per month. "
-                + SHOT_LIMIT_EXCEEDED
+                + SHOT_LIMIT_EXCEEDED,
+                code="SHOT_LIMIT_EXCEEDED",
             )
         logger.info("shot.recorded", user_id=user_id, period=str(period))
 

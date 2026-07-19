@@ -50,8 +50,13 @@ class UnprocessableError(AppError):
 
 
 class PaymentRequiredError(AppError):
-    def __init__(self, detail: str = "Upgrade your plan to access this feature.") -> None:
+    def __init__(
+        self,
+        detail: str = "Upgrade your plan to access this feature.",
+        code: str | None = None,
+    ) -> None:
         super().__init__(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=detail)
+        self.code = code
 
 
 class RateLimitError(AppError):

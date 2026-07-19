@@ -402,6 +402,7 @@ async def test_shoot_free_plan_limit_returns_402(
         headers=auth_headers,
     )
     assert res.status_code == 402
+    assert res.json()["code"] == "SHOT_LIMIT_EXCEEDED"
 
     remaining = await client.get("/api/v1/resumes/shots/remaining", headers=auth_headers)
     assert remaining.json()["shots_remaining"] == 0

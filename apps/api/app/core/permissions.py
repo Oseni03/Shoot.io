@@ -78,5 +78,6 @@ def assert_shot_available(plan: PlanTier, current_usage: int) -> None:
     if limits.max_shots_per_month is not None and current_usage >= limits.max_shots_per_month:
         raise PaymentRequiredError(
             f"Your plan allows {limits.max_shots_per_month} shots per month. "
-            + SHOT_LIMIT_EXCEEDED
+            + SHOT_LIMIT_EXCEEDED,
+            code="SHOT_LIMIT_EXCEEDED",
         )
